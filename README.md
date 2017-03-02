@@ -1,14 +1,13 @@
 # clo-wp
 
-A Clojure library designed to ... well, that part is up to you.
+Functional wrappers around the WordPress REST API (Version 2)
 
 ## Usage
 
-FIXME
+Not implemented yet.
 
 ## License
 
-Copyright © 2017 FIXME
+Copyright © 2017 Austin Fell
 
-Distributed under the Eclipse Public License either version 1.0 or (at
-your option) any later version.
+Distributed under the Eclipse Public License.
