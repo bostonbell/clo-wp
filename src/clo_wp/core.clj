@@ -21,10 +21,13 @@
     (->WordPressConnection url username password)
     (throw (IllegalArgumentException. "This URL does not have a cooresponding WordPress API."))))
 
-
 (defn get-pages
   [wordpress-connection]
-  )
+  (parse-string (:body (client/get (build-api-endpoint (:url wordpress-connection) "pages"))) true))
+
+(defn get-page
+  [wordpress-connection page-id]
+  (parse-string (:body (client/get (build-api-endpoint (:url wordpress-connection) (str "pages/" page-id)))) true))
 
 (defn foo
   "I don't do a whole lot."
