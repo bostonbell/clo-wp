@@ -3,8 +3,8 @@
              [cheshire.core :refer :all]))
 
 (defn build-api-endpoint
-  ([url ep] (str url "/wp-json/wp/v2/" ep))
-  ([url] (str url "/wp-json/v2/")))
+  ([url ep] (str url "/wp-json/wp/v2" ep))
+  ([url] (str url "/wp-json/v2")))
 
 (defn has-wordpress-api
   [url]
@@ -21,15 +21,14 @@
     (->WordPressConnection url username password)
     (throw (IllegalArgumentException. "This URL does not have a cooresponding WordPress API."))))
 
+(defn get-information
+  [wordpress-connection]
+    (:body (client/get (str (:url wordpress-connection) "/wp-json") {:as :json})))
+
 (defn get-pages
   [wordpress-connection]
-  (parse-string (:body (client/get (build-api-endpoint (:url wordpress-connection) "pages"))) true))
+    (:body (client/get (build-api-endpoint (:url wordpress-connection) "/pages") {:as :json})))
 
 (defn get-page
   [wordpress-connection page-id]
-  (parse-string (:body (client/get (build-api-endpoint (:url wordpress-connection) (str "pages/" page-id)))) true))
-
-(defn foo
-  "I don't do a whole lot."
-  [x]
-  (println x "Hello, World!"))
+    (:body (client/get (build-api-endpoint (:url wordpress-connection) (str "/pages/" page-id)) {:as :json})))
