@@ -29,6 +29,28 @@
                                    (:password wordpress-connection)]
                       :as :json})))
 
+;; TODO: REFACTOR HOW CONTEXT IS MANAGED.
+
+;; TODO: Change how the posts per page works by making this
+;; an iterator. For now per page works but if this is to
+;; be proper, we must allow wordpress pages with huge page
+;; numbers
+
+(defn get-pages
+  "Gets all the pages from a wordpress-connection. 
+
+  Takes an instantiated WordPressConnection object and returns 
+  a list of hashmaps cooresponding to the WordPress APIs schema."
+
+  [wordpress-connection]
+  (:body (client/get
+          (build-api-endpoint (:url wordpress-connection) "/pages?context=edit&status=any&per_page=100")
+          {:basic-auth [(:username wordpress-connection)
+                        (:password wordpress-connection)]
+           :content-type :json
+           :as :json})))
+
+
 (defn get-page-ids
   "Gets all the pages ids that a WordPress site currently has.
 
@@ -36,13 +58,7 @@
   a vector of integers representing page IDs."
 
   [wordpress-connection]
-  (into []
-        (map :id
-             (:body (client/get
-                     (build-api-endpoint (:url wordpress-connection) "/pages")
-                     {:basic-auth [(:username wordpress-connection)
-                                   (:password wordpress-connection)]
-                      :as :json})))))
+    (into [] (map :id (get-pages wordpress-connection))))
 
 (defn get-page-titles
   "Gets all the pages titles that a WordPress site currently has.
@@ -66,15 +82,13 @@
   ([wordpress-connection]
    (get-page-titles wordpress-connection :raw))
 
+  ; TODO: Refactor using threading macros.
   ([wordpress-connection display-type]
-   (into []
-         (map display-type
-          (map :title
-               (:body (client/get
-                       (build-api-endpoint (:url wordpress-connection) "/pages?context=edit")
-                       {:basic-auth [(:username wordpress-connection)
-                                     (:password wordpress-connection)]
-                        :as :json})))))))
+    (into [] (map display-type (map :title (get-pages wordpress-connection))))))
+
+(defn- extract-page-mapping-item
+  "Utility function to generate key value pairs in get-page-mapping"
+  [x display-type] [(keyword (str (:id x))) (display-type (:title x))])
 
 (defn get-page-mapping
   "Creates a mapping of page identifiers to page titles. Useful in contexts
@@ -82,6 +96,9 @@
   flip the key value pairs returned by this function because WordPress allows
   multiple pages with unique identifiers to have the same titles. Aka, 
   this map need not be one-to-one.
+
+  *IMPORTANT* This returns a key-value mapping of keywordized integers and 
+  strings, not integers and strings!!
 
   First aarity takes an instantiated WordPressConnection record and returns
   map of ids to raw page names.
@@ -103,28 +120,11 @@
    (get-page-mapping wordpress-connection :raw))
 
   ([wordpress-connection display-type]
-   (into {}
-         (map display-type
-          (map #(select-keys % [:id :title])
-               (:body (client/get
-                       (build-api-endpoint (:url wordpress-connection) "/pages?context=edit")
-                       {:basic-auth [(:username wordpress-connection)
-                                     (:password wordpress-connection)]
-                        :as :json})))))))
-
-(defn get-pages
-  "Gets all the pages from a wordpress-connection. 
-
-  Takes an instantiated WordPressConnection object and returns 
-  a list of hashmaps cooresponding to the WordPress APIs schema."
-
-  [wordpress-connection]
-  (:body (client/get
-          (build-api-endpoint (:url wordpress-connection) "/pages")
-          {:basic-auth [(:username wordpress-connection)
-                        (:password wordpress-connection)]
-           :content-type :json
-           :as :json})))
+   (clojure.walk/keywordize-keys
+    (into {}
+          (map
+             #(extract-page-mapping-item % display-type)
+             (get-pages wordpress-connection))))))
 
 (defn get-page
   "Gets a single page from a wordpress-connection.
@@ -139,7 +139,7 @@
 
   [wordpress-connection page-id]
   (:body (client/get
-          (build-api-endpoint (:url wordpress-connection) (str "/pages/" page-id))
+          (build-api-endpoint (:url wordpress-connection) (str "/pages/" page-id "?context=edit"))
           {:basic-auth [(:username wordpress-connection)
                         (:password wordpress-connection)]
            :content-type :json
@@ -171,12 +171,7 @@
   ([wordpress-connection page-id content-type]
    (content-type
     (:content
-     (:body (client/get
-             (build-api-endpoint (:url wordpress-connection) (str "/pages/" page-id "?context=edit"))
-             {:basic-auth [(:username wordpress-connection)
-                           (:password wordpress-connection)]
-              :content-type :json
-              :as :json}))))))
+     (get-page wordpress-connection page-id)))))
 
 (defn update-page
   "Uses an authenticated WordPressConnection and page id to update a page generically
@@ -191,7 +186,7 @@
   Use the get-page-ids function to retrieve all pages on a given site."
 
   [wordpress-connection page-id msg]
-  (:body (client/post
+    (:body (client/post
           (build-api-endpoint (:url wordpress-connection) (str "/pages/" page-id "?context=edit"))
           {:basic-auth [(:username wordpress-connection)
                         (:password wordpress-connection)]
@@ -211,13 +206,7 @@
   Use the get-page-ids function to retrieve all pages on a given site."
 
   [wordpress-connection page-id content]
-  (:body (client/post
-          (build-api-endpoint (:url wordpress-connection) (str "/pages/" page-id "?context=edit"))
-          {:basic-auth [(:username wordpress-connection)
-                        (:password wordpress-connection)]
-           :form-params {:content content}
-           :as :json
-           :content-type :json})))
+    (update-page wordpress-connection page-id {:content content}))
 
 (defn create-page
   "Uses an authenticated WordPressConnection to generate a new page.
