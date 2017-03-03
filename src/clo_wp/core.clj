@@ -81,24 +81,43 @@
   do not believe that the WordPress JSON API allows one to recieve raw text,
   but I believe for the most part that this is okay.
 
-  Takes an instantiated WordPressConnection record as well as a valid page-id
-  based on WordPress's ID system and returns the content of the page.
+  Second aarity takes an instantiated WordPressConnection record as well as a 
+  valid page-id based on WordPress's ID system and returns the !raw! content of the 
+  page if rendered content is desired, the third aarity should be used.
+  
+  Third aarity takes an instantiated WordPressConnection record, a valid page-id,
+  and the content render type one wishes to use: The current types that are returned
+  by the WordPress JSON API are :rendered and :raw. :raw is only accessable when
+  in the 'edit' context.
 
-  May throw a clojure.lang.ExceptionInfo in the case that an inproper identifier
-  was passed.
+  May throw a clojure.lang.ExceptionInfo in the case that an inproper page-id
+  was passed. May return nil if a non-existant content-type was passed.
 
-  Use the get-page-ids function to retrieve all pages on a give site."
+  Use the get-page-ids function to retrieve all pages on a given site."
 
-  [wordpress-connection page-id]
-   (:raw
-    (:body (client/get
-            (build-api-endpoint (:url wordpress-connection) (str "/pages/" page-id "?context=edit"))
-            {:basic-auth [(:username wordpress-connection)
-                          (:password wordpress-connection)]
-             :as :json}))))
+  ([wordpress-connection page-id]
+   (get-page-content wordpress-connection page-id :raw))
 
+  ([wordpress-connection page-id content-type]
+   (content-type
+    (:content
+     (:body (client/get
+             (build-api-endpoint (:url wordpress-connection) (str "/pages/" page-id "?context=edit"))
+             {:basic-auth [(:username wordpress-connection)
+                           (:password wordpress-connection)]
+              :as :json}))))))
 
-(defn post-page
+(defn update-page
+  "Uses an authenticated WordPressConnection and page id to update a page generically
+  with a map of attributes to be updated.
+
+  Takes an instantiated WordPressConnection, a valid page identifier, and a hashmap
+  representing data to be associated onto the page.
+
+  May throw a clojure.lang.ExceptionInfo in the case that an inproper page-id was 
+  passed.
+
+  Use the get-page-ids function to retrieve all pages on a given site."
   [wordpress-connection page-id msg]
   (:body (client/post
           (build-api-endpoint (:url wordpress-connection) (str "/pages/" page-id))
