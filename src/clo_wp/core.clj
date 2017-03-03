@@ -48,11 +48,12 @@
   "Gets all the pages titles that a WordPress site currently has.
 
   First aarity takes an instantiated WordPressConnection record and returns
-  a vector of strings representing rendered page titles.
+  a vector of strings representing raw page titles.
 
   Second aarity takes an instantiated WordPressConnection record as well as
   a keyword (:rendered, :raw) which will determine how to give the title, 
-  this is neccessary because WordPress renders titles via a macro system.
+  this is neccessary because WordPress renders titles via a macro system and
+  in turn returns a vector of strings representing generic page titles.
 
   In general, the first aarity is what you will want to use unless there
   is some reason not to.
@@ -63,7 +64,7 @@
   know what your doing!"
 
   ([wordpress-connection]
-   (get-page-titles wordpress-connection :rendered))
+   (get-page-titles wordpress-connection :raw))
 
   ([wordpress-connection display-type]
    (into []
@@ -75,6 +76,41 @@
                                      (:password wordpress-connection)]
                         :as :json})))))))
 
+(defn get-page-mapping
+  "Creates a mapping of page identifiers to page titles. Useful in contexts
+  in which we must explicitly associate the two. It is in general bad to
+  flip the key value pairs returned by this function because WordPress allows
+  multiple pages with unique identifiers to have the same titles. Aka, 
+  this map need not be one-to-one.
+
+  First aarity takes an instantiated WordPressConnection record and returns
+  map of ids to raw page names.
+
+  Second aarity takes an instantiated WordPressConnection record as well as
+  a keyword (:rendered, :raw) which will determine how to output the titles, 
+  this is neccessary because WordPress renders titles via a macro system.
+  In turn, a map of ids to generic page names will be returned.
+
+  In general, the first aarity is what you will want to use unless there
+  is some reason not to.
+
+  *Note for the second aarity*
+  May throw a clojure.lang.ExceptionInfo in the case that an inproper display
+  type was passed. In general, it is best to use the single aarity unless you
+  know what your doing!"
+
+  ([wordpress-connection]
+   (get-page-mapping wordpress-connection :raw))
+
+  ([wordpress-connection display-type]
+   (into {}
+         (map display-type
+          (map #(select-keys % [:id :title])
+               (:body (client/get
+                       (build-api-endpoint (:url wordpress-connection) "/pages?context=edit")
+                       {:basic-auth [(:username wordpress-connection)
+                                     (:password wordpress-connection)]
+                        :as :json})))))))
 
 (defn get-pages
   "Gets all the pages from a wordpress-connection. 
