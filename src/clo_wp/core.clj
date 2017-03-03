@@ -118,6 +118,7 @@
   passed.
 
   Use the get-page-ids function to retrieve all pages on a given site."
+
   [wordpress-connection page-id msg]
   (:body (client/post
           (build-api-endpoint (:url wordpress-connection) (str "/pages/" page-id "?context=edit"))
@@ -127,3 +128,22 @@
            :as :json
            :content-type :json})))
 
+(defn update-page-content
+  "Uses an authenticated WordPressConnection and page id to only update a pages content.
+
+  Takes an instantiated WordPressConnection, a valid page identifier, and a string
+  representing raw content to be applied to a page.
+
+  May throw a clojure.lang.ExceptionInfo in the case that an inproper page-id was 
+  passed.
+
+  Use the get-page-ids function to retrieve all pages on a given site."
+
+  [wordpress-connection page-id content]
+  (:body (client/post
+          (build-api-endpoint (:url wordpress-connection) (str "/pages/" page-id "?context=edit"))
+          {:basic-auth [(:username wordpress-connection)
+                        (:password wordpress-connection)]
+           :form-params {:content content}
+           :as :json
+           :content-type :json})))
