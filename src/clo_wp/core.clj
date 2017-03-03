@@ -33,15 +33,16 @@
   "Gets all the pages ids that a WordPress site currently has.
 
   Takes an instantiated WordPressConnection record and returns
-  a list of integers representing page IDs."
+  a vector of integers representing page IDs."
 
   [wordpress-connection]
-  (map :id
-       (:body (client/get
-               (build-api-endpoint (:url wordpress-connection) "/pages")
-               {:basic-auth [(:username wordpress-connection)
-                             (:password wordpress-connection)]
-                :as :json}))))
+  (into []
+        (map :id
+             (:body (client/get
+                     (build-api-endpoint (:url wordpress-connection) "/pages")
+                     {:basic-auth [(:username wordpress-connection)
+                                   (:password wordpress-connection)]
+                      :as :json})))))
 
 (defn get-pages
   "Gets all the pages from a wordpress-connection. 
@@ -57,7 +58,7 @@
            :as :json})))
 
 (defn get-page
-  "Gets a single page from a wordpress-connection. 
+  "Gets a single page from a wordpress-connection.
 
   Requires an instantiated WordPressConnection record to be passed 
   as well as a valid page-id based on WordPress's ID system. 
@@ -65,7 +66,7 @@
   May throw a clojure.lang.ExceptionInfo in the case
   that an inproper identifier was passed.
 
-  Use the get-page-ids method to retrieve all pages on a given site."
+  Use the get-page-ids function to retrieve all pages on a given site."
 
   [wordpress-connection page-id]
   (:body (client/get
@@ -73,6 +74,29 @@
           {:basic-auth [(:username wordpress-connection)
                         (:password wordpress-connection)]
            :as :json})))
+
+(defn get-page-content
+  "Retrieves the content of a simple page from a wordpress-connection as text.
+  Note that this retrieves the --rendered-- page content: unfortunately I 
+  do not believe that the WordPress JSON API allows one to recieve raw text,
+  but I believe for the most part that this is okay.
+
+  Takes an instantiated WordPressConnection record as well as a valid page-id
+  based on WordPress's ID system and returns the content of the page.
+
+  May throw a clojure.lang.ExceptionInfo in the case that an inproper identifier
+  was passed.
+
+  Use the get-page-ids function to retrieve all pages on a give site."
+
+  [wordpress-connection page-id]
+   (:raw
+    (:body (client/get
+            (build-api-endpoint (:url wordpress-connection) (str "/pages/" page-id "?context=edit"))
+            {:basic-auth [(:username wordpress-connection)
+                          (:password wordpress-connection)]
+             :as :json}))))
+
 
 (defn post-page
   [wordpress-connection page-id msg]
