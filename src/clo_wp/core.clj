@@ -44,6 +44,38 @@
                                    (:password wordpress-connection)]
                       :as :json})))))
 
+(defn get-page-titles
+  "Gets all the pages titles that a WordPress site currently has.
+
+  First aarity takes an instantiated WordPressConnection record and returns
+  a vector of strings representing rendered page titles.
+
+  Second aarity takes an instantiated WordPressConnection record as well as
+  a keyword (:rendered, :raw) which will determine how to give the title, 
+  this is neccessary because WordPress renders titles via a macro system.
+
+  In general, the first aarity is what you will want to use unless there
+  is some reason not to.
+
+  *Note for the second aarity*
+  May throw a clojure.lang.ExceptionInfo in the case that an inproper display
+  type was passed. In general, it is best to use the single aarity unless you
+  know what your doing!"
+
+  ([wordpress-connection]
+   (get-page-titles wordpress-connection :rendered))
+
+  ([wordpress-connection display-type]
+   (into []
+         (map display-type
+          (map :title
+               (:body (client/get
+                       (build-api-endpoint (:url wordpress-connection) "/pages?context=edit")
+                       {:basic-auth [(:username wordpress-connection)
+                                     (:password wordpress-connection)]
+                        :as :json})))))))
+
+
 (defn get-pages
   "Gets all the pages from a wordpress-connection. 
 
@@ -55,6 +87,7 @@
           (build-api-endpoint (:url wordpress-connection) "/pages")
           {:basic-auth [(:username wordpress-connection)
                         (:password wordpress-connection)]
+           :content-type :json
            :as :json})))
 
 (defn get-page
@@ -73,6 +106,7 @@
           (build-api-endpoint (:url wordpress-connection) (str "/pages/" page-id))
           {:basic-auth [(:username wordpress-connection)
                         (:password wordpress-connection)]
+           :content-type :json
            :as :json})))
 
 (defn get-page-content
@@ -105,6 +139,7 @@
              (build-api-endpoint (:url wordpress-connection) (str "/pages/" page-id "?context=edit"))
              {:basic-auth [(:username wordpress-connection)
                            (:password wordpress-connection)]
+              :content-type :json
               :as :json}))))))
 
 (defn update-page
@@ -167,9 +202,7 @@
   passed. The other two aarities are quite safe, but make sure you are using the
   only the status types which your WordPress version supports if this aarity is used!
 
-  All aarities return the identifier of the new page.
-
-"
+  All aarities return the identifier of the new page."
 
   ([wordpress-connection attrs]
    (:id
@@ -181,7 +214,28 @@
              :as :json
              :content-type :json}))))
   ([wordpress-connection title content]
-   (create-page wordpress-connection {:title title :content content}))
+   (create-page wordpress-connection {:title title :content content :status :publish}))
   ([wordpress-connection title content status]
    (create-page wordpress-connection {:title title :content content :status status})))
+
+(defn delete-page
+  "Uses an authenticated WordPressConnection and page id to delete a page.
+
+  Takes an instantiated WordPressConnection and a valid page identifier.
+
+  May throw a clojure.lang.ExceptionInfo in the case that an inproper page-id was 
+  passed.
+
+  Returns the entire page object in order to make use a little bit less risky!
+  Still, use this function with caution!  
+
+  Use the get-page-ids function to retrieve all pages on a given site."
+
+  [wordpress-connection page-id]
+  (:body (client/delete
+          (build-api-endpoint (:url wordpress-connection) (str "/pages/" page-id "?context=edit"))
+          {:basic-auth [(:username wordpress-connection)
+                        (:password wordpress-connection)]
+           :as :json
+           :content-type :json})))
 
