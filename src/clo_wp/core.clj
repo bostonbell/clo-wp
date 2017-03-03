@@ -1,13 +1,14 @@
 (ns clo-wp.core
   (:require [clj-http.client :as client]
-             [cheshire.core :refer :all]))
+            [cheshire.core :refer :all]))
 
 (defn build-api-endpoint
   ([url ep] (str url "/wp-json/wp/v2" ep))
-  ([url] (str url "/wp-json/v2")))
+  ([url] (str url "/wp-json/wp/v2")))
 
 (defn has-wordpress-api
   [url]
+  (print (build-api-endpoint url))
   (try
     (let [response (client/head (build-api-endpoint url) {:accept :json})]
       (client/success? response))
@@ -23,12 +24,24 @@
 
 (defn get-information
   [wordpress-connection]
-    (:body (client/get (str (:url wordpress-connection) "/wp-json") {:as :json})))
+  (:body (client/get (str (:url wordpress-connection) "/wp-json")
+                     {:basic-auth [(:username wordpress-connection)
+                                   (:password wordpress-connection)]
+                      :as :json})))
 
 (defn get-pages
   [wordpress-connection]
-    (:body (client/get (build-api-endpoint (:url wordpress-connection) "/pages") {:as :json})))
+  (:body (client/get
+          (build-api-endpoint (:url wordpress-connection) "/pages")
+          {:basic-auth [(:username wordpress-connection)
+                        (:password wordpress-connection)]
+           :as :json})))
 
 (defn get-page
   [wordpress-connection page-id]
-    (:body (client/get (build-api-endpoint (:url wordpress-connection) (str "/pages/" page-id)) {:as :json})))
+  (:body (client/get
+          (build-api-endpoint (:url wordpress-connection) (str "/pages/" page-id))
+          {:basic-auth [(:username wordpress-connection)
+                        (:password wordpress-connection)]
+           :as :json})))
+
