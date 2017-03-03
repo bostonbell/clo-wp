@@ -50,7 +50,6 @@
            :content-type :json
            :as :json})))
 
-
 (defn get-page-ids
   "Gets all the pages ids that a WordPress site currently has.
 
@@ -58,7 +57,7 @@
   a vector of integers representing page IDs."
 
   [wordpress-connection]
-    (into [] (map :id (get-pages wordpress-connection))))
+  (into [] (map :id (get-pages wordpress-connection))))
 
 (defn get-page-titles
   "Gets all the pages titles that a WordPress site currently has.
@@ -84,7 +83,7 @@
 
   ; TODO: Refactor using threading macros.
   ([wordpress-connection display-type]
-    (into [] (map display-type (map :title (get-pages wordpress-connection))))))
+   (into [] (map display-type (map :title (get-pages wordpress-connection))))))
 
 (defn- extract-page-mapping-item
   "Utility function to generate key value pairs in get-page-mapping"
@@ -123,8 +122,8 @@
    (clojure.walk/keywordize-keys
     (into {}
           (map
-             #(extract-page-mapping-item % display-type)
-             (get-pages wordpress-connection))))))
+           #(extract-page-mapping-item % display-type)
+           (get-pages wordpress-connection))))))
 
 (defn get-page
   "Gets a single page from a wordpress-connection.
@@ -135,7 +134,7 @@
   May throw a clojure.lang.ExceptionInfo in the case
   that an inproper identifier was passed.
 
-  Use the get-page-ids function to retrieve all pages on a given site."
+  Use the get-page-ids function to retrieve all pages for any given instantiated WordPressConnection."
 
   [wordpress-connection page-id]
   (:body (client/get
@@ -163,7 +162,7 @@
   May throw a clojure.lang.ExceptionInfo in the case that an inproper page-id
   was passed. May return nil if a non-existant content-type was passed.
 
-  Use the get-page-ids function to retrieve all pages on a given site."
+  Use the get-page-ids function to retrieve all pages for any given instantiated WordPressConnection."
 
   ([wordpress-connection page-id]
    (get-page-content wordpress-connection page-id :raw))
@@ -183,10 +182,10 @@
   May throw a clojure.lang.ExceptionInfo in the case that an inproper page-id was 
   passed.
 
-  Use the get-page-ids function to retrieve all pages on a given site."
+  Use the get-page-ids function to retrieve all pages for any given instantiated WordPressConnection."
 
   [wordpress-connection page-id msg]
-    (:body (client/post
+  (:body (client/post
           (build-api-endpoint (:url wordpress-connection) (str "/pages/" page-id "?context=edit"))
           {:basic-auth [(:username wordpress-connection)
                         (:password wordpress-connection)]
@@ -203,10 +202,10 @@
   May throw a clojure.lang.ExceptionInfo in the case that an inproper page-id was 
   passed.
 
-  Use the get-page-ids function to retrieve all pages on a given site."
+  Use the get-page-ids function to retrieve all pages for any given instantiated WordPressConnection."
 
   [wordpress-connection page-id content]
-    (update-page wordpress-connection page-id {:content content}))
+  (update-page wordpress-connection page-id {:content content}))
 
 (defn create-page
   "Uses an authenticated WordPressConnection to generate a new page.
@@ -254,7 +253,7 @@
   Returns the entire page object in order to make use a little bit less risky!
   Still, use this function with caution!  
 
-  Use the get-page-ids function to retrieve all pages on a given site."
+  Use the get-page-ids function to retrieve all pages for any given instantiated WordPressConnection."
 
   [wordpress-connection page-id]
   (:body (client/delete
@@ -263,4 +262,62 @@
                         (:password wordpress-connection)]
            :as :json
            :content-type :json})))
+
+(defn get-page-revisions
+  "Uses an authenticated WordPressConnection and page id to get all of the post
+  revisions for a specific page.
+
+  Takes an instantiated WordPressConnection and a valid page identifier.
+
+  May throw a clojure.lang.ExceptionInfo in the case that an inproper page-id was
+  passed.
+
+  Returns a collection of post revision maps.
+
+  Use the get-page-ids function to retrieve all pages for any given instantiated WordPressConnection."
+
+  [wordpress-connection page-id]
+  (:body (client/get
+          (build-api-endpoint (:url wordpress-connection) (str "/pages/" page-id "/revisions?context=edit"))
+          {:basic-auth [(:username wordpress-connection)
+                        (:password wordpress-connection)]
+           :content-type :json
+           :as :json})))
+
+(defn get-page-revision-ids
+  "Gets all the pages ids that a WordPress site currently has.
+
+  Takes an instantiated WordPressConnection record and returns
+  a vector of integers representing page IDs."
+
+  [wordpress-connection id]
+    (into [] (map :id (get-page-revisions wordpress-connection id))))
+
+(defn get-page-revision
+  "Uses an authenticated WordPressConnection, a page id, and a specific
+  revision id to give back information about said specific revision. 
+
+  Takes an instantiated WordPressConnection and a valid page identifier.
+
+  Returns a specific page-revision map.
+
+  May throw a clojure.lang.ExceptionInfo in the case that an inproper page-id 
+  OR page-revision-id was passed.
+
+  Use the get-page-revision-ids function to retrieve all page 
+  revisions for any given page given back by get-page/get-pages."
+
+  [wordpress-connection page-id page-revision-id]
+  (:body (client/get
+          (build-api-endpoint (:url wordpress-connection)
+                              (str
+                               "/pages/"
+                               page-id
+                               "/revisions/"
+                               page-revision-id
+                               "?context=edit"))
+          {:basic-auth [(:username wordpress-connection)
+                        (:password wordpress-connection)]
+           :content-type :json
+           :as :json})))
 
