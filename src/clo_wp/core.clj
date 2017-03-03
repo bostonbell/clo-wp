@@ -147,3 +147,41 @@
            :form-params {:content content}
            :as :json
            :content-type :json})))
+
+(defn create-page
+  "Uses an authenticated WordPressConnection to generate a new page.
+
+  Second aarity takes an instantiated WordPressConnection, and a hashmap 
+  representing data to instantiate a new page page with.
+
+  Third aarity represents the usual use case in which the user does not
+  care about the status of a post (and as a result will default to publish)
+  it takes an instantiated WordPressConnection, a title, and a content.
+
+  Fourth aarity represents the usual use case that takes an instantiated 
+  WordPressConnection, a title, a content, and the status which can be either 
+  :publish, :future, :draft, :pending, or :private.
+  
+  *Note on fourth aarity*
+  May throw a clojure.lang.ExceptionInfo in the case that an inproper status was 
+  passed. The other two aarities are quite safe, but make sure you are using the
+  only the status types which your WordPress version supports if this aarity is used!
+
+  All aarities return the identifier of the new page.
+
+"
+
+  ([wordpress-connection attrs]
+   (:id
+    (:body (client/post
+            (build-api-endpoint (:url wordpress-connection) (str "/pages?context=edit"))
+            {:basic-auth [(:username wordpress-connection)
+                          (:password wordpress-connection)]
+             :form-params attrs
+             :as :json
+             :content-type :json}))))
+  ([wordpress-connection title content]
+   (create-page wordpress-connection {:title title :content content}))
+  ([wordpress-connection title content status]
+   (create-page wordpress-connection {:title title :content content :status status})))
+
