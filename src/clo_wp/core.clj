@@ -120,9 +120,10 @@
   Use the get-page-ids function to retrieve all pages on a given site."
   [wordpress-connection page-id msg]
   (:body (client/post
-          (build-api-endpoint (:url wordpress-connection) (str "/pages/" page-id))
+          (build-api-endpoint (:url wordpress-connection) (str "/pages/" page-id "?context=edit"))
           {:basic-auth [(:username wordpress-connection)
                         (:password wordpress-connection)]
            :form-params msg
+           :as :json
            :content-type :json})))
 
