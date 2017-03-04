@@ -7,7 +7,8 @@
   "Gets all the posts from a wordpress-connection. 
 
   Takes an instantiated WordPressConnection object and returns 
-  a list of hashmaps cooresponding to the WordPress APIs schema."
+  a list of hashmaps cooresponding to the WordPress APIs schema for
+  posts."
 
   [wordpress-connection]
   (:body (get-from-wordpress wordpress-connection "/posts/")))
@@ -25,20 +26,17 @@
   "Gets all the posts titles that a WordPress site currently has.
 
   First aarity takes an instantiated WordPressConnection record and returns
-  a vector of strings representing raw post titles.
+  a vector of strings representing raw post titles. This is in general the
+  aarity you will want to use.
 
   Second aarity takes an instantiated WordPressConnection record as well as
   a keyword (:rendered, :raw) which will determine how to give the title, 
   this is neccessary because WordPress renders titles via a macro system and
   in turn returns a vector of strings representing generic post titles.
 
-  In general, the first aarity is what you will want to use unless there
-  is some reason not to.
-
   *Note for the second aarity*
   May throw a clojure.lang.ExceptionInfo in the case that an inproper display
-  type was passed. In general, it is best to use the single aarity unless you
-  know what your doing!"
+  type was passed."
 
   ([wordpress-connection]
    (get-post-titles wordpress-connection :raw))
@@ -55,22 +53,19 @@
   "Creates a mapping of post identifiers to post titles. Useful in contexts
   in which we must explicitly associate the two. It is in general bad to
   flip the key value pairs returned by this function because WordPress allows
-  multiple posts with unique identifiers to have the same titles. Aka, 
-  this map need not be one-to-one.
+  multiple posts with unique identifiers to have the same titles. 
 
   *IMPORTANT* This returns a key-value mapping of keywordized integers and 
   strings, not integers and strings!!
 
   First aarity takes an instantiated WordPressConnection record and returns
-  map of ids to raw post names.
+  map of ids to raw post names. This is in general the aarity you will want
+  to use.
 
   Second aarity takes an instantiated WordPressConnection record as well as
   a keyword (:rendered, :raw) which will determine how to output the titles, 
   this is neccessary because WordPress renders titles via a macro system.
   In turn, a map of ids to generic post names will be returned.
-
-  In general, the first aarity is what you will want to use unless there
-  is some reason not to.
 
   *Note for the second aarity*
   May throw a clojure.lang.ExceptionInfo in the case that an inproper display
@@ -103,9 +98,6 @@
 
 (defn get-post-content
   "Retrieves the content of a simple post from a wordpress-connection as text.
-  Note that this retrieves the --rendered-- post content: unfortunately I 
-  do not believe that the WordPress JSON API allows one to recieve raw text,
-  but I believe for the most part that this is okay.
 
   Second aarity takes an instantiated WordPressConnection record as well as a 
   valid post-id based on WordPress's ID system and returns the !raw! content of the 
@@ -131,9 +123,6 @@
 
 (defn get-post-title
   "Retrieves the content of a simple post from a wordpress-connection as text.
-  Note that this retrieves the --rendered-- post content: unfortunately I 
-  do not believe that the WordPress JSON API allows one to recieve raw text,
-  but I believe for the most part that this is okay.
 
   Second aarity takes an instantiated WordPressConnection record as well as a 
   valid post-id based on WordPress's ID system and returns the !raw! content of the 
@@ -190,22 +179,23 @@
   "Uses an authenticated WordPressConnection to generate a new post.
 
   Second aarity takes an instantiated WordPressConnection, and a hashmap 
-  representing data to instantiate a new post post with.
+  representing data to instantiate a new post post with. Returns the hash
+  map of the new post.
 
   Third aarity represents the usual use case in which the user does not
   care about the status of a post (and as a result will default to publish)
-  it takes an instantiated WordPressConnection, a title, and a content.
+  it takes an instantiated WordPressConnection, a title, and a content. Returns
+  the hash map of the new post.
 
   Fourth aarity represents the usual use case that takes an instantiated 
   WordPressConnection, a title, a content, and the status which can be either 
-  :publish, :future, :draft, :pending, or :private.
+  :publish, :future, :draft, :pending, or :private. Returns the hash map of the
+  new post.
   
   *Note on fourth aarity*
   May throw a clojure.lang.ExceptionInfo in the case that an inproper status was 
   passed. The other two aarities are quite safe, but make sure you are using the
-  only the status types which your WordPress version supports if this aarity is used!
-
-  All aarities return the identifier of the new post."
+  only the status types which your WordPress version supports if this aarity is used!"
 
   ([wordpress-connection attrs]
    (:body (post-to-wordpress wordpress-connection (str "/posts") attrs)))
