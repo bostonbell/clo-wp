@@ -29,10 +29,38 @@
     {:basic-auth
      [(:username wordpress-connection)
       (:password wordpress-connection)]
+     :content-type :json
      :as :json})
     )
    ([wordpress-connection endpoint-path]
     (get-from-wordpress wordpress-connection endpoint-path :edit)))
+
+(defn delete-from-wordpress
+  ([wordpress-connection endpoint-path context]
+   (client/delete
+    (build-api-endpoint (:url wordpress-connection) (str endpoint-path "?context=" (name context)))
+    {:basic-auth
+     [(:username wordpress-connection)
+      (:password wordpress-connection)]
+     :content-type :json
+     :as :json})
+    )
+   ([wordpress-connection endpoint-path]
+    (delete-from-wordpress wordpress-connection endpoint-path :edit)))
+
+(defn post-to-wordpress
+  ([wordpress-connection endpoint-path context data]
+   (client/post
+    (build-api-endpoint (:url wordpress-connection) (str endpoint-path "?context=" (name context)))
+    {:basic-auth
+     [(:username wordpress-connection)
+      (:password wordpress-connection)]
+     :form-params data
+     :content-type :json
+     :as :json})
+    )
+   ([wordpress-connection endpoint-path data]
+    (post-to-wordpress wordpress-connection endpoint-path :edit data)))
 
 (defn get-site-information
   [wordpress-connection]

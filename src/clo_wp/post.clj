@@ -3,7 +3,6 @@
             [cheshire.core :refer :all]
             [clo-wp.core :refer :all]))
 
-
 (defn get-posts
   "Gets all the posts from a wordpress-connection. 
 
@@ -170,14 +169,8 @@
 
   Use the get-post-ids function to retrieve all posts for any given instantiated WordPressConnection."
 
-  [wordpress-connection post-id msg]
-  (:body (client/post
-          (build-api-endpoint (:url wordpress-connection) (str "/posts/" post-id "?context=edit"))
-          {:basic-auth [(:username wordpress-connection)
-                        (:password wordpress-connection)]
-           :form-params msg
-           :as :json
-           :content-type :json})))
+  [wordpress-connection post-id data]
+  (:body (post-to-wordpress wordpress-connection (str "/posts/" post-id) data)))
 
 (defn update-post-content
   "Uses an authenticated WordPressConnection and post id to only update a posts content.
@@ -215,14 +208,7 @@
   All aarities return the identifier of the new post."
 
   ([wordpress-connection attrs]
-   (:id
-    (:body (client/post
-            (build-api-endpoint (:url wordpress-connection) (str "/posts?context=edit"))
-            {:basic-auth [(:username wordpress-connection)
-                          (:password wordpress-connection)]
-             :form-params attrs
-             :as :json
-             :content-type :json}))))
+   (:body (post-to-wordpress wordpress-connection (str "/posts") attrs)))
   ([wordpress-connection title content]
    (create-post wordpress-connection {:title title :content content :status :publish}))
   ([wordpress-connection title content status]
@@ -242,12 +228,7 @@
   Use the get-post-ids function to retrieve all posts for any given instantiated WordPressConnection."
 
   [wordpress-connection post-id]
-  (:body (client/delete
-          (build-api-endpoint (:url wordpress-connection) (str "/posts/" post-id "?context=edit"))
-          {:basic-auth [(:username wordpress-connection)
-                        (:password wordpress-connection)]
-           :as :json
-           :content-type :json})))
+  (:body (delete-from-wordpress wordpress-connection (str "/posts/" post-id))))
 
 (defn get-post-revisions
   "Uses an authenticated WordPressConnection and post id to get all of the post 
@@ -263,12 +244,7 @@
   Use the get-post-ids function to retrieve all posts for any given instantiated WordPressConnection."
 
   [wordpress-connection post-id]
-  (:body (client/get
-          (build-api-endpoint (:url wordpress-connection) (str "/posts/" post-id "/revisions?context=edit"))
-          {:basic-auth [(:username wordpress-connection)
-                        (:password wordpress-connection)]
-           :content-type :json
-           :as :json})))
+  (:body (get-from-wordpress wordpress-connection (str "/posts/" post-id "/revisions"))))
 
 (defn get-post-revision-ids
   "Gets all the post revision ids that a given post id in a WordPress 
@@ -281,7 +257,7 @@
   and returns a vector of integers representing post revision IDs."
 
   [wordpress-connection post-id]
-    (into [] (map :id (get-post-revisions wordpress-connection post-id))))
+  (into [] (map :id (get-post-revisions wordpress-connection post-id))))
 
 (defn get-post-revision
   "Uses an authenticated WordPressConnection, a post id, and a specific
@@ -299,18 +275,7 @@
   revisions for any given post given back by get-post/get-posts."
 
   [wordpress-connection post-id post-revision-id]
-  (:body (client/get
-          (build-api-endpoint (:url wordpress-connection)
-                              (str
-                               "/posts/"
-                               post-id
-                               "/revisions/"
-                               post-revision-id
-                               "?context=edit"))
-          {:basic-auth [(:username wordpress-connection)
-                        (:password wordpress-connection)]
-           :content-type :json
-           :as :json})))
+  (:body (get-from-wordpress wordpress-connection (str "/posts/" post-id "/revisions/" post-revision-id))))
 
 (defn delete-post-revision
   "Uses an authenticated WordPressConnection, a post id, and a 
@@ -328,16 +293,4 @@
   revisions for any given post given back by get-post/get-posts."
 
   [wordpress-connection post-id post-revision-id]
-  (:body (client/delete
-          (build-api-endpoint (:url wordpress-connection)
-                              (str
-                               "/posts/"
-                               post-id
-                               "/revisions/"
-                               post-revision-id
-                               "?context=edit&force=true"))
-          {:basic-auth [(:username wordpress-connection)
-                        (:password wordpress-connection)]
-           :content-type :json
-           :as :json})))
-
+  (:body (delete-from-wordpress wordpress-connection (str "/posts/" post-id "/revisions/" post-revision-id) true)))
