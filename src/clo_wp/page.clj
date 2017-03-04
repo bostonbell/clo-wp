@@ -3,13 +3,6 @@
             [cheshire.core :refer :all]
             [clo-wp.core :refer :all]))
 
-;; TODO: REFACTOR HOW CONTEXT IS MANAGED.
-
-;; TODO: Change how the posts per page works by making this
-;; an iterator. For now per page works but if this is to
-;; be proper, we must allow wordpress pages with huge page
-;; numbers
-
 (defn get-pages
   "Gets all the pages from a wordpress-connection. 
 
@@ -17,12 +10,7 @@
   a list of hashmaps cooresponding to the WordPress APIs schema."
 
   [wordpress-connection]
-  (:body (client/get
-          (build-api-endpoint (:url wordpress-connection) "/pages?context=edit&status=any&per_page=100")
-          {:basic-auth [(:username wordpress-connection)
-                        (:password wordpress-connection)]
-           :content-type :json
-           :as :json})))
+  (:body (get-from-wordpress wordpress-connection "/pages/")))
 
 (defn get-page-ids
   "Gets all the pages ids that a WordPress site currently has.
@@ -111,12 +99,7 @@
   Use the get-page-ids function to retrieve all pages for any given instantiated WordPressConnection."
 
   [wordpress-connection page-id]
-  (:body (client/get
-          (build-api-endpoint (:url wordpress-connection) (str "/pages/" page-id "?context=edit"))
-          {:basic-auth [(:username wordpress-connection)
-                        (:password wordpress-connection)]
-           :content-type :json
-           :as :json})))
+  (:body (get-from-wordpress wordpress-connection (str "/pages/" page-id))))
 
 (defn get-page-content
   "Retrieves the content of a simple page from a wordpress-connection as text.
@@ -146,7 +129,6 @@
     (:content
      (get-page wordpress-connection page-id)))))
 
-;; NEEDS DOCS
 (defn get-page-title
   "Retrieves the content of a simple page from a wordpress-connection as text.
   Note that this retrieves the --rendered-- page content: unfortunately I 
@@ -167,14 +149,13 @@
 
   Use the get-page-ids function to retrieve all pages for any given instantiated WordPressConnection."
 
-  ([wordpress-connection post-id]
-   (get-page-title wordpress-connection post-id :raw))
+  ([wordpress-connection page-id]
+   (get-page-title wordpress-connection page-id :raw))
 
-  ([wordpress-connection post-id content-type]
+  ([wordpress-connection page-id content-type]
    (content-type
     (:title
-     (get-page wordpress-connection post-id)))))
-
+     (get-page wordpress-connection page-id)))))
 
 (defn update-page
   "Uses an authenticated WordPressConnection and page id to update a page generically
@@ -188,14 +169,8 @@
 
   Use the get-page-ids function to retrieve all pages for any given instantiated WordPressConnection."
 
-  [wordpress-connection page-id msg]
-  (:body (client/post
-          (build-api-endpoint (:url wordpress-connection) (str "/pages/" page-id "?context=edit"))
-          {:basic-auth [(:username wordpress-connection)
-                        (:password wordpress-connection)]
-           :form-params msg
-           :as :json
-           :content-type :json})))
+  [wordpress-connection page-id data]
+  (:body (post-to-wordpress wordpress-connection (str "/pages/" page-id) data)))
 
 (defn update-page-content
   "Uses an authenticated WordPressConnection and page id to only update a pages content.
@@ -218,7 +193,7 @@
   representing data to instantiate a new page page with.
 
   Third aarity represents the usual use case in which the user does not
-  care about the status of a post (and as a result will default to publish)
+  care about the status of a page (and as a result will default to publish)
   it takes an instantiated WordPressConnection, a title, and a content.
 
   Fourth aarity represents the usual use case that takes an instantiated 
@@ -233,14 +208,7 @@
   All aarities return the identifier of the new page."
 
   ([wordpress-connection attrs]
-   (:id
-    (:body (client/post
-            (build-api-endpoint (:url wordpress-connection) (str "/pages?context=edit"))
-            {:basic-auth [(:username wordpress-connection)
-                          (:password wordpress-connection)]
-             :form-params attrs
-             :as :json
-             :content-type :json}))))
+   (:body (post-to-wordpress wordpress-connection (str "/pages") attrs)))
   ([wordpress-connection title content]
    (create-page wordpress-connection {:title title :content content :status :publish}))
   ([wordpress-connection title content status]
@@ -260,15 +228,10 @@
   Use the get-page-ids function to retrieve all pages for any given instantiated WordPressConnection."
 
   [wordpress-connection page-id]
-  (:body (client/delete
-          (build-api-endpoint (:url wordpress-connection) (str "/pages/" page-id "?context=edit"))
-          {:basic-auth [(:username wordpress-connection)
-                        (:password wordpress-connection)]
-           :as :json
-           :content-type :json})))
+  (:body (delete-from-wordpress wordpress-connection (str "/pages/" page-id))))
 
 (defn get-page-revisions
-  "Uses an authenticated WordPressConnection and page id to get all of the page
+  "Uses an authenticated WordPressConnection and page id to get all of the page 
   revisions for a specific page.
 
   Takes an instantiated WordPressConnection and a valid page identifier.
@@ -276,17 +239,12 @@
   May throw a clojure.lang.ExceptionInfo in the case that an inproper page-id was
   passed.
 
-  Returns a collection of post revision maps.
+  Returns a collection of page revision maps.
 
   Use the get-page-ids function to retrieve all pages for any given instantiated WordPressConnection."
 
   [wordpress-connection page-id]
-  (:body (client/get
-          (build-api-endpoint (:url wordpress-connection) (str "/pages/" page-id "/revisions?context=edit"))
-          {:basic-auth [(:username wordpress-connection)
-                        (:password wordpress-connection)]
-           :content-type :json
-           :as :json})))
+  (:body (get-from-wordpress wordpress-connection (str "/pages/" page-id "/revisions"))))
 
 (defn get-page-revision-ids
   "Gets all the page revision ids that a given page id in a WordPress 
@@ -299,7 +257,7 @@
   and returns a vector of integers representing page revision IDs."
 
   [wordpress-connection page-id]
-    (into [] (map :id (get-page-revisions wordpress-connection page-id))))
+  (into [] (map :id (get-page-revisions wordpress-connection page-id))))
 
 (defn get-page-revision
   "Uses an authenticated WordPressConnection, a page id, and a specific
@@ -317,18 +275,7 @@
   revisions for any given page given back by get-page/get-pages."
 
   [wordpress-connection page-id page-revision-id]
-  (:body (client/get
-          (build-api-endpoint (:url wordpress-connection)
-                              (str
-                               "/pages/"
-                               page-id
-                               "/revisions/"
-                               page-revision-id
-                               "?context=edit"))
-          {:basic-auth [(:username wordpress-connection)
-                        (:password wordpress-connection)]
-           :content-type :json
-           :as :json})))
+  (:body (get-from-wordpress wordpress-connection (str "/pages/" page-id "/revisions/" page-revision-id))))
 
 (defn delete-page-revision
   "Uses an authenticated WordPressConnection, a page id, and a 
@@ -346,16 +293,4 @@
   revisions for any given page given back by get-page/get-pages."
 
   [wordpress-connection page-id page-revision-id]
-  (:body (client/delete
-          (build-api-endpoint (:url wordpress-connection)
-                              (str
-                               "/pages/"
-                               page-id
-                               "/revisions/"
-                               page-revision-id
-                               "?context=edit&force=true"))
-          {:basic-auth [(:username wordpress-connection)
-                        (:password wordpress-connection)]
-           :content-type :json
-           :as :json})))
-
+  (:body (delete-from-wordpress wordpress-connection (str "/pages/" page-id "/revisions/" page-revision-id) true)))
