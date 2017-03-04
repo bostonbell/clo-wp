@@ -4,10 +4,10 @@
             [clo-wp.core :refer :all]))
 
 (defn get-pages
-  "Gets all the pages from a wordpress-connection. 
+  "Gets all the pages from a wordpress-connection.
 
   Takes an instantiated WordPressConnection object and returns 
-  a list of hashmaps cooresponding to the WordPress APIs schema."
+  a list of hashmaps cooresponding to the WordPress APIs page schema."
 
   [wordpress-connection]
   (:body (get-from-wordpress wordpress-connection "/pages/")))
@@ -25,20 +25,15 @@
   "Gets all the pages titles that a WordPress site currently has.
 
   First aarity takes an instantiated WordPressConnection record and returns
-  a vector of strings representing raw page titles.
+  a vector of strings representing raw page titles. This is usually what
+  you will want to use.
 
   Second aarity takes an instantiated WordPressConnection record as well as
-  a keyword (:rendered, :raw) which will determine how to give the title, 
-  this is neccessary because WordPress renders titles via a macro system and
-  in turn returns a vector of strings representing generic page titles.
-
-  In general, the first aarity is what you will want to use unless there
-  is some reason not to.
+  a keyword (:rendered, :raw) which will determine how to render the title.
 
   *Note for the second aarity*
   May throw a clojure.lang.ExceptionInfo in the case that an inproper display
-  type was passed. In general, it is best to use the single aarity unless you
-  know what your doing!"
+  type was passed."
 
   ([wordpress-connection]
    (get-page-titles wordpress-connection :raw))
@@ -103,9 +98,6 @@
 
 (defn get-page-content
   "Retrieves the content of a simple page from a wordpress-connection as text.
-  Note that this retrieves the --rendered-- page content: unfortunately I 
-  do not believe that the WordPress JSON API allows one to recieve raw text,
-  but I believe for the most part that this is okay.
 
   Second aarity takes an instantiated WordPressConnection record as well as a 
   valid page-id based on WordPress's ID system and returns the !raw! content of the 
@@ -131,18 +123,16 @@
 
 (defn get-page-title
   "Retrieves the content of a simple page from a wordpress-connection as text.
-  Note that this retrieves the --rendered-- page content: unfortunately I 
-  do not believe that the WordPress JSON API allows one to recieve raw text,
-  but I believe for the most part that this is okay.
 
   Second aarity takes an instantiated WordPressConnection record as well as a 
   valid page-id based on WordPress's ID system and returns the !raw! content of the 
-  page if rendered content is desired, the third aarity should be used.
+  page if rendered content is desired, the third aarity should be used. In turn
+  returns a said pages title.
   
   Third aarity takes an instantiated WordPressConnection record, a valid page-id,
   and the content render type one wishes to use: The current types that are returned
   by the WordPress JSON API are :rendered and :raw. :raw is only accessable when
-  in the 'edit' context.
+  in the 'edit' context. In turn returns said pages title.
 
   May throw a clojure.lang.ExceptionInfo in the case that an inproper page-id
   was passed. May return nil if a non-existant content-type was passed.
