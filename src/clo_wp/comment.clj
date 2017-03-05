@@ -133,47 +133,27 @@
     (:content
      (get-comment wordpress-connection comment-id)))))
 
-(defn get-comment-name
-  "Retrieves the content of a simple comment from a wordpress-connection as text.
-
-  Second aarity takes an instantiated WordPressConnection record as well as a 
-  valid comment-id based on WordPress's ID system and returns the !raw! content of the 
-  comment if rendered content is desired, the third aarity should be used.
-  
-  Third aarity takes an instantiated WordPressConnection record, a valid comment-id,
-  and the content render type one wishes to use: The current types that are returned
-  by the WordPress JSON API are :rendered and :raw. :raw is only accessable when
-  in the 'edit' context.
-
-  May throw a clojure.lang.ExceptionInfo in the case that an inproper comment-id
-  was passed. May return nil if a non-existant content-type was passed.
-
-  Use the get-comment-ids function to retrieve all comments for any given instantiated WordPressConnection."
-
-  ([wordpress-connection comment-id]
-   (->> comment-id
-        (get-comment wordpress-connection)
-        :name)))
-
 (defn create-comment
   "Uses an authenticated WordPressConnection to generate a new comment.
 
   Second aarity takes an instantiated WordPressConnection, and a hashmap 
   representing data to instantiate a new comment with.
 
-  Third aarity represents the usual use case in which the user does not
-  care about the slug, parent, and meta-data of a comment. it takes an instantiated 
-  WordPressConnection, a name, and a description.
+  Fourth aarity represents the usual use case in which the user simply
+  wishes to post a comment to a certain post id. Takes a post which
+  is a number, the authors name, and the content one wishes to push
+  to the comment. Returns the new comment.
 
   All aarities return the json representation of the new comment.
 
-  May throw a clojure.lang.ExceptionInfo in the case that the comment name
-  already exists."
+  May throw a clojure.lang.ExceptionInfo in the case that the post is not
+  allowing any more comments Also may throw in the case that the post 
+  simply does not exist."
 
   ([wordpress-connection attrs]
    (:body (post-to-wordpress wordpress-connection (str "/comments") attrs)))
-  ([wordpress-connection name description]
-   (create-comment wordpress-connection {:name name :description description})))
+  ([wordpress-connection post author-name content]
+   (create-comment wordpress-connection {:content content :author_name author-name :post post})))
 
 (defn update-comment
   "Uses an authenticated WordPressConnection and comment id to update a comment generically
@@ -190,7 +170,7 @@
   [wordpress-connection comment-id data]
   (:body (post-to-wordpress wordpress-connection (str "/comments/" comment-id) data)))
 
-(defn update-comment-name
+(defn update-comment-content
   "Uses an authenticated WordPressConnection and comment id to only update a comment's name.
 
   Takes an instantiated WordPressConnection, a valid comment identifier, and a string
@@ -201,8 +181,8 @@
 
   Use the get-comment-ids function to retrieve all comments for any given instantiated WordPressConnection."
 
-  [wordpress-connection comment-id name]
-  (update-comment wordpress-connection comment-id {:name name}))
+  [wordpress-connection comment-id content]
+  (update-comment wordpress-connection comment-id {:content content}))
 
 (defn delete-comment
   "Uses an authenticated WordPressConnection and comment id to delete a comment.
