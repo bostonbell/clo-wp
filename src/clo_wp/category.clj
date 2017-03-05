@@ -17,7 +17,7 @@
   "Gets all the category ids that a WordPress site currently has.
 
   Takes an instantiated WordPressConnection record and returns
-  a vector of integers representing page category entries."
+  a vector of integers representing category category entries."
 
   [wordpress-connection]
   (->> wordpress-connection
@@ -49,14 +49,14 @@
         (into []))))
 
 (defn- extract-category-mapping-item
-  "Utility function to generate key value pairs in get-page-mapping"
+  "Utility function to generate key value pairs in get-category-mapping"
   [item] [(keyword (str (:id item))) (:name item)])
 
 (defn get-category-mapping
-  "Creates a mapping of page identifiers to page names. Useful in contexts
+  "Creates a mapping of category identifiers to category names. Useful in contexts
   in which we must explicitly associate the two. It is in general bad to
   flip the key value pairs returned by this function because WordPress allows
-  multiple pages with unique identifiers to have the same names. Aka, 
+  multiple categories identifiers to have the same names. Aka, 
   this map need not be one-to-one.
 
   *IMPORTANT* This returns a key-value mapping of keywordized integers and 
@@ -105,30 +105,30 @@
 
   Use the get-category-ids function to retrieve all category for any given instantiated WordPressConnection."
 
-  ([wordpress-connection page-id]
-   (->> page-id
+  ([wordpress-connection category-id]
+   (->> category-id
         (get-category wordpress-connection)
         :description)))
 
 (defn get-category-name
-  "Retrieves the content of a simple page from a wordpress-connection as text.
+  "Retrieves the content of a simple category from a wordpress-connection as text.
 
   Second aarity takes an instantiated WordPressConnection record as well as a 
-  valid page-id based on WordPress's ID system and returns the !raw! content of the 
-  page if rendered content is desired, the third aarity should be used.
+  valid category-id based on WordPress's ID system and returns the !raw! content of the 
+  category if rendered content is desired, the third aarity should be used.
   
-  Third aarity takes an instantiated WordPressConnection record, a valid page-id,
+  Third aarity takes an instantiated WordPressConnection record, a valid category-id,
   and the content render type one wishes to use: The current types that are returned
   by the WordPress JSON API are :rendered and :raw. :raw is only accessable when
   in the 'edit' context.
 
-  May throw a clojure.lang.ExceptionInfo in the case that an inproper page-id
+  May throw a clojure.lang.ExceptionInfo in the case that an inproper category-id
   was passed. May return nil if a non-existant content-type was passed.
 
-  Use the get-page-ids function to retrieve all pages for any given instantiated WordPressConnection."
+  Use the get-category-ids function to retrieve all categories for any given instantiated WordPressConnection."
 
-  ([wordpress-connection page-id]
-   (->> page-id
+  ([wordpress-connection category-id]
+   (->> category-id
         (get-category wordpress-connection)
         :name)))
 
@@ -142,7 +142,7 @@
   care about the slug, parent, and meta-data of a category. it takes an instantiated 
   WordPressConnection, a name, and a description.
 
-  All aarities return the json representation of the new page.
+  All aarities return the json representation of the new category.
 
   May throw a clojure.lang.ExceptionInfo in the case that the category name
   already exists."
@@ -153,16 +153,16 @@
    (create-category wordpress-connection {:name name :description description})))
 
 (defn update-category
-  "Uses an authenticated WordPressConnection and page id to update a category generically
+  "Uses an authenticated WordPressConnection and category id to update a category generically
   with a map of attributes to be updated.
 
-  Takes an instantiated WordPressConnection, a valid page identifier, and a hashmap
+  Takes an instantiated WordPressConnection, a valid category identifier, and a hashmap
   representing data to be associated onto the category.
 
   May throw a clojure.lang.ExceptionInfo in the case that an inproper category id was 
   passed.
 
-  Use the get-category-ids function to retrieve all pages for any given instantiated WordPressConnection."
+  Use the get-category-ids function to retrieve all categories for any given instantiated WordPressConnection."
 
   [wordpress-connection category-id data]
   (:body (post-to-wordpress wordpress-connection (str "/categories/" category-id) data)))
