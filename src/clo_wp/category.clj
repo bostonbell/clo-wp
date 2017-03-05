@@ -20,7 +20,10 @@
   a vector of integers representing page category entries."
 
   [wordpress-connection]
-  (into [] (map :id (get-categories wordpress-connection))))
+  (->> wordpress-connection
+       get-categories
+       (map :id)
+       (into [])))
 
 (defn get-category-names
   "Gets all the category titles that a WordPress site currently has.
@@ -40,11 +43,14 @@
    (get-category-names wordpress-connection :raw))
 
   ([wordpress-connection display-type]
-   (into [] (map :name (get-categories wordpress-connection)))))
+   (->> wordpress-connection
+        get-categories
+        (map :name)
+        (into []))))
 
 (defn- extract-category-mapping-item
   "Utility function to generate key value pairs in get-page-mapping"
-  [x] [(keyword (str (:id x))) (:name x)])
+  [item] [(keyword (str (:id item))) (:name item)])
 
 (defn get-category-mapping
   "Creates a mapping of page identifiers to page titles. Useful in contexts
@@ -69,10 +75,10 @@
   know what your doing!"
 
   ([wordpress-connection]
-   (clojure.walk/keywordize-keys
-    (into {}
-          (map
-           extract-category-mapping-item (get-categories wordpress-connection))))))
+   (->> wordpress-connection
+        get-categories
+        (map extract-category-mapping-item)
+        (into {}))))
 
 (defn get-category
   "Gets a single category from a wordpress-connection.
@@ -100,9 +106,11 @@
   Use the get-category-ids function to retrieve all category for any given instantiated WordPressConnection."
 
   ([wordpress-connection page-id]
-     (:description (get-category wordpress-connection page-id))))
+   (->> page-id
+        (get-category wordpress-connection)
+        :description)))
 
-(defn get-page-title
+(defn get-category-name
   "Retrieves the content of a simple page from a wordpress-connection as text.
 
   Second aarity takes an instantiated WordPressConnection record as well as a 
@@ -120,10 +128,6 @@
   Use the get-page-ids function to retrieve all pages for any given instantiated WordPressConnection."
 
   ([wordpress-connection page-id]
-   (get-page-title wordpress-connection page-id :raw))
-
-  ([wordpress-connection page-id content-type]
-   (content-type
-    (:title
-     (get-page wordpress-connection page-id)))))
-
+   (->> page-id
+        (get-category wordpress-connection)
+        :name)))
