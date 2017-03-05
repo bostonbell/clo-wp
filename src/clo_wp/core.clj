@@ -31,7 +31,7 @@
   In certain cases where the JSON api can not be found, an IllegalArgumentException will be 
   thrown, and likewise for not including an HTTP header."
   [url username password]
-  (if (or (clojure.string/includes? url "http://") (clojure.string/includes? url "https://")
+  (if (or (clojure.string/includes? url "http://") (clojure.string/includes? url "https://"))
     (if (has-wordpress-api url)
         (->WordPressConnection url username password)
         (throw (IllegalArgumentException. "This URL does not seem to have a cooresponding WordPress API or does not exist.")))
@@ -73,7 +73,7 @@
 
   ([wordpress-connection endpoint-path context]
    (client/delete
-    (build-api-endpoint (:url wordpress-connection) (str endpoint-path "?context=" (name context)))
+    (build-api-endpoint (:url wordpress-connection) (str endpoint-path "?context=" (name context) "&force=true"))
     {:basic-auth
      [(:username wordpress-connection)
       (:password wordpress-connection)]

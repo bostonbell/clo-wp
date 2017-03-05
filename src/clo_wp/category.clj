@@ -197,3 +197,4 @@
   [wordpress-connection category-id]
   (:body (delete-from-wordpress wordpress-connection (str "/categories/" category-id))))
 
+;; TODO: CHECK IF CATEGORIES DO REVISIONS AS WELL
