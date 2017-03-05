@@ -57,12 +57,12 @@
   strings, not integers and strings!!
 
   First aarity takes an instantiated WordPressConnection record and returns
-  map of ids to raw page names.
+  map of ids to raw page titles.
 
   Second aarity takes an instantiated WordPressConnection record as well as
   a keyword (:rendered, :raw) which will determine how to output the titles, 
   this is neccessary because WordPress renders titles via a macro system.
-  In turn, a map of ids to generic page names will be returned.
+  In turn, a map of ids to generic page titles will be returned.
 
   In general, the first aarity is what you will want to use unless there
   is some reason not to.
@@ -176,6 +176,8 @@
   [wordpress-connection page-id content]
   (update-page wordpress-connection page-id {:content content}))
 
+;; TODO: Update page, post title?
+
 (defn create-page
   "Uses an authenticated WordPressConnection to generate a new page.
 
@@ -195,7 +197,7 @@
   passed. The other two aarities are quite safe, but make sure you are using the
   only the status types which your WordPress version supports if this aarity is used!
 
-  All aarities return the identifier of the new page."
+  All aarities return the the json representation of the new page."
 
   ([wordpress-connection attrs]
    (:body (post-to-wordpress wordpress-connection (str "/pages") attrs)))
