@@ -18,9 +18,11 @@
 
 (defn connect
   [url username password]
-  (if (has-wordpress-api url)
-    (->WordPressConnection url username password)
-    (throw (IllegalArgumentException. "This URL does not have a cooresponding WordPress API."))))
+  (if (clojure.string/includes? url "http://")
+    (if (has-wordpress-api url)
+        (->WordPressConnection url username password)
+        (throw (IllegalArgumentException. "This URL does not have a cooresponding WordPress API.")))
+    (throw (IllegalArgumentException. "URL did not include http header: Try using the fully qualified URL."))))
 
 (defn get-from-wordpress
   ([wordpress-connection endpoint-path context]
