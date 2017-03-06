@@ -152,6 +152,7 @@
 
   ([wordpress-connection attrs]
    (:body (post-to-wordpress wordpress-connection (str "/comments") attrs)))
+
   ([wordpress-connection post author-name content]
    (create-comment wordpress-connection {:content content :author_name author-name :post post})))
 
@@ -199,5 +200,3 @@
 
   [wordpress-connection comment-id]
   (:body (delete-from-wordpress wordpress-connection (str "/comments/" comment-id))))
-
-;; TODO: CHECK IF COMMENTS DO REVISIONS AS WELL

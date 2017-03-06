@@ -38,9 +38,12 @@
   ([wordpress-connection]
    (get-page-titles wordpress-connection :raw))
 
-  ; TODO: Refactor using threading macros.
   ([wordpress-connection display-type]
-   (into [] (map display-type (map :title (get-pages wordpress-connection))))))
+   (->> wordpress-connection
+        get-pages
+        (map :title)
+        (map display-type)
+        (into []))))
 
 (defn- extract-page-mapping-item
   "Utility function to generate key value pairs in get-page-mapping"
@@ -76,11 +79,13 @@
    (get-page-mapping wordpress-connection :raw))
 
   ([wordpress-connection display-type]
-   (clojure.walk/keywordize-keys
-    (into {}
-          (map
-           #(extract-page-mapping-item % display-type)
-           (get-pages wordpress-connection))))))
+   (->> wordpress-connection
+        get-pages
+        (map
+         #(extract-page-mapping-item % display-type))
+        (into {})
+        clojure.walk/keywordize-keys
+        )))
 
 (defn get-page
   "Gets a single page from a wordpress-connection.
@@ -176,7 +181,19 @@
   [wordpress-connection page-id content]
   (update-page wordpress-connection page-id {:content content}))
 
-;; TODO: Update page, post title?
+(defn update-page-title
+  "Uses an authenticated WordPressConnection and page id to only update a pages title.
+
+  Takes an instantiated WordPressConnection, a valid page identifier, and a string
+  representing a raw title to be applied to a page.
+
+  May throw a clojure.lang.ExceptionInfo in the case that an inproper page-id was 
+  passed.
+
+  Use the get-page-ids function to retrieve all pages for any given instantiated WordPressConnection."
+
+  [wordpress-connection page-id title]
+  (update-page wordpress-connection page-id {:title title}))
 
 (defn create-page
   "Uses an authenticated WordPressConnection to generate a new page.
@@ -201,8 +218,10 @@
 
   ([wordpress-connection attrs]
    (:body (post-to-wordpress wordpress-connection (str "/pages") attrs)))
+
   ([wordpress-connection title content]
    (create-page wordpress-connection {:title title :content content :status :publish}))
+
   ([wordpress-connection title content status]
    (create-page wordpress-connection {:title title :content content :status status})))
 
@@ -267,7 +286,10 @@
   revisions for any given page given back by get-page/get-pages."
 
   [wordpress-connection page-id page-revision-id]
-  (:body (get-from-wordpress wordpress-connection (str "/pages/" page-id "/revisions/" page-revision-id))))
+  (->> page-revision-id
+       (str "/pages/" page-id "/revisions/")
+       (get-from-wordpress wordpress-connection)
+       :body))
 
 (defn delete-page-revision
   "Uses an authenticated WordPressConnection, a page id, and a 
@@ -285,4 +307,8 @@
   revisions for any given page given back by get-page/get-pages."
 
   [wordpress-connection page-id page-revision-id]
-  (:body (delete-from-wordpress wordpress-connection (str "/pages/" page-id "/revisions/" page-revision-id) true)))
+  (:body
+   (delete-from-wordpress
+    wordpress-connection (str "/pages/" page-id "/revisions/" page-revision-id)
+    true ;force it!
+    )))

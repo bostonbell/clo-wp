@@ -41,9 +41,12 @@
   ([wordpress-connection]
    (get-post-titles wordpress-connection :raw))
 
-  ; TODO: Refactor using threading macros.
   ([wordpress-connection display-type]
-   (into [] (map display-type (map :title (get-posts wordpress-connection))))))
+   (->> wordpress-connection
+        get-posts
+        (map :title)
+        (map display-type)
+        (into []))))
 
 (defn- extract-post-mapping-item
   "Utility function to generate key value pairs in get-post-mapping"
@@ -76,11 +79,12 @@
    (get-post-mapping wordpress-connection :raw))
 
   ([wordpress-connection display-type]
-   (clojure.walk/keywordize-keys
-    (into {}
-          (map
-           #(extract-post-mapping-item % display-type)
-           (get-posts wordpress-connection))))))
+   (->> wordpress-connection
+        get-posts
+        (map
+         #(extract-post-mapping-item % display-type))
+        (into {})
+        clojure.walk/keywordize-keys)))
 
 (defn get-post
   "Gets a single post from a wordpress-connection.
@@ -175,6 +179,20 @@
   [wordpress-connection post-id content]
   (update-post wordpress-connection post-id {:content content}))
 
+(defn update-post-title
+  "Uses an authenticated WordPressConnection and post id to only update a posts title.
+
+  Takes an instantiated WordPressConnection, a valid post identifier, and a string
+  representing raw title to be applied to a post.
+
+  May throw a clojure.lang.ExceptionInfo in the case that an inproper post-id was 
+  passed.
+
+  Use the get-post-ids function to retrieve all posts for any given instantiated WordPressConnection."
+
+  [wordpress-connection post-id title]
+  (update-post wordpress-connection post-id {:title title}))
+
 (defn create-post
   "Uses an authenticated WordPressConnection to generate a new post.
 
@@ -199,8 +217,10 @@
 
   ([wordpress-connection attrs]
    (:body (post-to-wordpress wordpress-connection (str "/posts") attrs)))
+
   ([wordpress-connection title content]
    (create-post wordpress-connection {:title title :content content :status :publish}))
+
   ([wordpress-connection title content status]
    (create-post wordpress-connection {:title title :content content :status status})))
 
@@ -265,7 +285,10 @@
   revisions for any given post given back by get-post/get-posts."
 
   [wordpress-connection post-id post-revision-id]
-  (:body (get-from-wordpress wordpress-connection (str "/posts/" post-id "/revisions/" post-revision-id))))
+  (->> post-revision-id
+       (str "/posts/" post-id "/revisions/")
+       (get-from-wordpress wordpress-connection)
+       :body))
 
 (defn delete-post-revision
   "Uses an authenticated WordPressConnection, a post id, and a 

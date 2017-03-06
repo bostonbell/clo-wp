@@ -84,6 +84,7 @@
 
   Use the get-taxonomy-names function to retrieve all taxonomy names for any given instantiated WordPressConnection."
 
+  ;; TODO: CLEAN UP THREADING: UNNECCISSAR
   ([wordpress-connection taxonomy-keyword]
    (->> (name taxonomy-keyword)
         (get-taxonomy wordpress-connection)

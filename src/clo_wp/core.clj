@@ -117,7 +117,8 @@
   on the site itself."
 
   [wordpress-connection]
-  (:body (client/get (str (:url wordpress-connection) "/wp-json")
-                     {:basic-auth [(:username wordpress-connection)
-                                   (:password wordpress-connection)]
-                      :as :json})))
+  (:body (client/get
+           (str (:url wordpress-connection) "/wp-json")
+           {:basic-auth [(:username wordpress-connection)
+                         (:password wordpress-connection)]
+                          :as :json})))

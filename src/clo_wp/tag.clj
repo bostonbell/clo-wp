@@ -19,6 +19,7 @@
   Takes an instantiated WordPressConnection record and returns
   a vector of integers representing tag tag entries."
 
+  ;; TODO: UNNECCESSARY THREAD: REMOVE AFTER TESTS CREATED.
   [wordpress-connection]
   (->> wordpress-connection
        get-tags
@@ -42,6 +43,7 @@
   ([wordpress-connection]
    (get-tag-names wordpress-connection :raw))
 
+  ;; TODO: UNNECCESSARY THREAD: REMOVE AFTER TESTS CREATED.
   ([wordpress-connection display-type]
    (->> wordpress-connection
         get-tags
@@ -107,6 +109,7 @@
 
   Use the get-tag-ids function to retrieve all tag for any given instantiated WordPressConnection."
 
+  ;; TODO: UNNECCESSARY THREAD: REMOVE AFTER TESTS CREATED.
   ([wordpress-connection tag-id]
    (->> tag-id
         (get-tag wordpress-connection)
@@ -129,6 +132,7 @@
 
   Use the get-tag-ids function to retrieve all tags for any given instantiated WordPressConnection."
 
+  ;; TODO: UNNECCESSARY THREAD: REMOVE AFTER TESTS CREATED.
   ([wordpress-connection tag-id]
    (->> tag-id
         (get-tag wordpress-connection)
@@ -198,5 +202,3 @@
 
   [wordpress-connection tag-id]
   (:body (delete-from-wordpress wordpress-connection (str "/tags/" tag-id))))
-
-;; TODO: CHECK IF TAGS DO REVISIONS AS WELL
