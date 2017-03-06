@@ -19,7 +19,10 @@
   a vector of integers representing media IDs."
 
   [wordpress-connection]
-  (into [] (map :id (get-media-items wordpress-connection))))
+  (->> wordpress-connection
+       get-media-items
+       (map :id)
+       (into [])))
 
 (defn get-media-titles
   "Gets all the media-items titles that a WordPress site currently has.
@@ -38,9 +41,12 @@
   ([wordpress-connection]
    (get-media-titles wordpress-connection :raw))
 
-  ; TODO: Refactor using threading macros.
   ([wordpress-connection display-type]
-   (into [] (map display-type (map :title (get-media-items wordpress-connection))))))
+   (->> wordpress-connection
+        get-media-items
+        (map :title)
+        (map display-type)
+        (into []))))
 
 (defn- extract-media-mapping-item
   "Utility function to generate key value pairs in get-media-mapping"
