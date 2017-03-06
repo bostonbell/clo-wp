@@ -56,57 +56,54 @@
   "Creates a mapping of media identifiers to media titles. Useful in contexts
   in which we must explicitly associate the two. It is in general bad to
   flip the key value pairs returned by this function because WordPress allows
-  multiple media-items with unique identifiers to have the same titles. Aka, 
-  this map need not be one-to-one.
+  multiple media-items with unique identifiers to have the same titles. 
 
   *IMPORTANT* This returns a key-value mapping of keywordized integers and 
   strings, not integers and strings!!
 
   First aarity takes an instantiated WordPressConnection record and returns
-  map of ids to raw media titles.
+  map of ids to raw media titles. this is in general what you will want to 
+  use.
 
   Second aarity takes an instantiated WordPressConnection record as well as
   a keyword (:rendered, :raw) which will determine how to output the titles, 
   this is neccessary because WordPress renders titles via a macro system.
   In turn, a map of ids to generic media titles will be returned.
 
-  In general, the first aarity is what you will want to use unless there
-  is some reason not to.
-
   *Note for the second aarity*
   May throw a clojure.lang.ExceptionInfo in the case that an inproper display
-  type was passed. In general, it is best to use the single aarity unless you
-  know what your doing!"
+  type was passed."
 
   ([wordpress-connection]
    (get-media-mapping wordpress-connection :raw))
 
   ([wordpress-connection display-type]
-   (clojure.walk/keywordize-keys
-    (into {}
-          (map
-           #(extract-media-mapping-item % display-type)
-           (get-media-items wordpress-connection))))))
+   (->> wordpress-connection
+        get-media-items
+        (map
+         #(extract-media-mapping-item % display-type))
+        (into {})
+        clojure.walk/keywordize-keys)))
 
 (defn get-media
-  "Gets a single media from a wordpress-connection.
+  "Gets a single media item from a wordpress-connection.
 
   Requires an instantiated WordPressConnection record to be passed 
-  as well as a valid media-id based on WordPress's ID system. 
+  as well as a valid media id based on WordPress's ID system. 
 
   May throw a clojure.lang.ExceptionInfo in the case
-  that an inproper identifier was passed.
+  that an inproper memdia identifier was passed.
 
   Use the get-media-ids function to retrieve all media-items for any given instantiated WordPressConnection."
 
   [wordpress-connection media-id]
   (:body (get-from-wordpress wordpress-connection (str "/media/" media-id))))
 
-(defn get-media-link
-  "Retrieves the content of a simple media from a wordpress-connection as text.
+(defn get-media-url
+  "Retrieves the url of a simple media from a WordpressConnection instance as text.
 
   Second aarity takes an instantiated WordPressConnection record as well as a 
-  valid media-id based on WordPress's ID system and returns the !raw! content of the 
+  valid media id based on WordPress's ID system and returns the raw content of the 
   media if rendered content is desired, the third aarity should be used.
   
   Third aarity takes an instantiated WordPressConnection record, a valid media-id,
@@ -120,14 +117,14 @@
   Use the get-media-ids function to retrieve all media-items for any given instantiated WordPressConnection."
 
   ([wordpress-connection media-id]
-    (:source_url
-     (get-media wordpress-connection media-id))))
+   (:source_url
+    (get-media wordpress-connection media-id))))
 
 (defn get-media-title
-  "Retrieves the content of a simple media from a wordpress-connection as text.
+  "Retrieves the title of a simple media from a wordpress-connection as text.
 
   Second aarity takes an instantiated WordPressConnection record as well as a 
-  valid media-id based on WordPress's ID system and returns the !raw! content of the 
+  valid media id based on WordPress's ID system and returns the raw content of the 
   media if rendered content is desired, the third aarity should be used. In turn
   returns a said media-items title.
   
@@ -150,19 +147,19 @@
      (get-media wordpress-connection media-id)))))
 
 (defn get-media-description
-  "Retrieves the content of a simple media from a wordpress-connection as text.
+  "Retrieves the description of a simple media from a wordpress-connection as text.
 
   Second aarity takes an instantiated WordPressConnection record as well as a 
-  valid media-id based on WordPress's ID system and returns the !raw! content of the 
+  valid media id based on WordPress's ID system and returns the raw content of the 
   media if rendered content is desired, the third aarity should be used. In turn
   returns a said media-items title.
   
-  Third aarity takes an instantiated WordPressConnection record, a valid media-id,
+  Third aarity takes an instantiated WordPressConnection record, a valid media id,
   and the content render type one wishes to use: The current types that are returned
   by the WordPress JSON API are :rendered and :raw. :raw is only accessable when
   in the 'edit' context. In turn returns said media-items title.
 
-  May throw a clojure.lang.ExceptionInfo in the case that an inproper media-id
+  May throw a clojure.lang.ExceptionInfo in the case that an inproper media id
   was passed. May return nil if a non-existant content-type was passed.
 
   Use the get-media-ids function to retrieve all media-items for any given instantiated WordPressConnection."
@@ -218,7 +215,6 @@
   [wordpress-connection media-id new-description]
   (update-media wordpress-connection media-id {:description new-description}))
 
-
 (defn create-media
   "Uses an authenticated WordPressConnection to generate a new media.
 
@@ -246,8 +242,10 @@
 
   ([wordpress-connection attrs]
    (:body (post-to-wordpress wordpress-connection (str "/media/") attrs)))
+
   ([wordpress-connection title description file]
    (create-media wordpress-connection {:title title :description description :status :publish :file file}))
+
   ([wordpress-connection title description file status]
    (create-media wordpress-connection {:title title :description description :status status :file file})))
 
