@@ -3,6 +3,8 @@
             [cheshire.core :refer :all]
             [clo-wp.core :refer :all]))
 
+;; Should this be vector??
+
 (defn get-pages
   "Gets all the pages from a wordpress-connection.
 
@@ -10,7 +12,7 @@
   a list of hashmaps cooresponding to the WordPress APIs page schema."
 
   [wordpress-connection]
-  (:body (get-from-wordpress wordpress-connection "/pages/")))
+  (doall (get-from-wordpress wordpress-connection "/pages/")))
 
 (defn get-page-ids
   "Gets all the pages ids that a WordPress site currently has.
@@ -99,7 +101,10 @@
   Use the get-page-ids function to retrieve all pages for any given instantiated WordPressConnection."
 
   [wordpress-connection page-id]
-  (:body (get-from-wordpress wordpress-connection (str "/pages/" page-id))))
+  (get-from-wordpress wordpress-connection (str "/pages/" page-id)))
+
+;; TODO MULTI METHOD ALL OF THESE FOR
+;; SIMPLE KEYWORDS!
 
 (defn get-page-content
   "Retrieves the content of a simple page from a wordpress-connection as text.
@@ -241,6 +246,8 @@
   [wordpress-connection page-id]
   (:body (delete-from-wordpress wordpress-connection (str "/pages/" page-id))))
 
+;; Should this be vector??
+
 (defn get-page-revisions
   "Uses an authenticated WordPressConnection and page id to get all of the page 
   revisions for a specific page.
@@ -255,7 +262,7 @@
   Use the get-page-ids function to retrieve all pages for any given instantiated WordPressConnection."
 
   [wordpress-connection page-id]
-  (:body (get-from-wordpress wordpress-connection (str "/pages/" page-id "/revisions"))))
+  (doall (get-from-wordpress wordpress-connection (str "/pages/" page-id "/revisions"))))
 
 (defn get-page-revision-ids
   "Gets all the page revision ids that a given page id in a WordPress 

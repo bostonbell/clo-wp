@@ -37,6 +37,7 @@
         (throw (IllegalArgumentException. "This URL does not seem to have a cooresponding WordPress API or does not exist.")))
     (throw (IllegalArgumentException. "URL did not include http header: Try using the fully qualified URL."))))
 
+;; TODO: Easier passing of query params.
 (defn get-from-wordpress
   "Raw API call for receiving data from a site that has WordPress installed.
   
@@ -48,15 +49,30 @@
 
   Primary for internal use or for extending the library."
 
-  ([wordpress-connection endpoint-path context]
-   (client/get
-    (build-api-endpoint (:url wordpress-connection) (str endpoint-path "?context=" (name context)))
+  ([wordpress-connection endpoint-path context page]
+   (let [response (client/get
+    (build-api-endpoint (:url wordpress-connection)
+                        (str endpoint-path
+                             "?context=" (name context)
+                             "&page=" page
+                             "&per_page=" 100))
     {:basic-auth
      [(:username wordpress-connection)
       (:password wordpress-connection)]
      :content-type :json
-     :as :json})
-    )
+     :as :json})]
+     (if (empty? (:body response))
+       nil
+       (if (= (get-in response [:_links :collection]) nil)
+         (:body response)
+         (lazy-seq (concat
+           (:body response)
+           (get-from-wordpress wordpress-connection
+                            endpoint-path
+                            context
+                            (+ page 1))))))))
+  ([wordpress-connection endpoint-path context]
+   (get-from-wordpress wordpress-connection endpoint-path context 1))
    ([wordpress-connection endpoint-path]
     (get-from-wordpress wordpress-connection endpoint-path :edit)))
 
@@ -122,3 +138,18 @@
            {:basic-auth [(:username wordpress-connection)
                          (:password wordpress-connection)]
                           :as :json})))
+
+(defn generate-id-getter
+  "Gets all the ids from a given resource.
+
+  Takes a callback to be used that will get information
+  for a specific endpoint."
+
+  [callback]
+  (fn [wordpress-connection]
+    (->> wordpress-connection
+         callback
+         (map :id)
+         (into []))))
+
+
