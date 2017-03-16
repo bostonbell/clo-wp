@@ -62,7 +62,7 @@
      :content-type :json
      :as :json})]
      (if (empty? (:body response))
-       nil
+       ()
        (if (= (get-in response [:_links :collection]) nil)
          (:body response)
          (lazy-seq (concat
@@ -88,14 +88,13 @@
   Primary for internal use or for extending the library."
 
   ([wordpress-connection endpoint-path context]
-   (client/delete
+   (:body (client/delete
     (build-api-endpoint (:url wordpress-connection) (str endpoint-path "?context=" (name context) "&force=true"))
     {:basic-auth
      [(:username wordpress-connection)
       (:password wordpress-connection)]
      :content-type :json
-     :as :json})
-    )
+     :as :json})))
    ([wordpress-connection endpoint-path]
     (delete-from-wordpress wordpress-connection endpoint-path :edit)))
 
@@ -111,17 +110,72 @@
   Primary for internal use or for extending the library."
 
   ([wordpress-connection endpoint-path context data]
-   (client/post
+   (:body (client/post
     (build-api-endpoint (:url wordpress-connection) (str endpoint-path "?context=" (name context)))
     {:basic-auth
      [(:username wordpress-connection)
       (:password wordpress-connection)]
      :form-params data
      :content-type :json
-     :as :json})
-    )
+     :as :json})))
    ([wordpress-connection endpoint-path data]
     (post-to-wordpress wordpress-connection endpoint-path :edit data)))
+
+
+(defmulti str-item
+  (fn [item]))
+
+(defmethod str-item String [s]
+  s)
+
+(defmethod str-item :default [s]
+  (name s))
+
+(defn special-stringize
+  [x]
+  (if (number? x)
+    (str x)
+    x))
+
+(defn endpathize
+  [items] (str "/" (clojure.string/join
+           "/"
+           (map
+            (comp
+             str-item
+             special-stringize)
+            items))))
+
+;; TODO MULTI METHOD ALL OF THESE SO
+;; WE CAN USE THEM ON LOCAL MAPS, DIRECT
+;; URLS!
+
+(defn api-getter
+  ([wordpress-connection endpoint-path]
+   (doall (get-from-wordpress wordpress-connection (endpathize endpoint-path))))
+  ([wordpress-connection endpoint-path extraction-items]
+   (let [response (api-getter wordpress-connection endpoint-path)]
+     (if (seq? response)
+       (into [] (map #(get-in % extraction-items) response))
+       (if (map? response)
+         (get-in response extraction-items))))))
+
+(defn api-mapper
+  ([wordpress-connection endpoint-path key-extraction-item value-extraction-item]
+   (clojure.walk/keywordize-keys
+    (into {}
+          (map #(identity [(get-in % key-extraction-item) (get-in % value-extraction-item)])
+               (api-getter wordpress-connection endpoint-path))))))
+
+(defn api-deleter
+  ([wordpress-connection endpoint-path]
+    (delete-from-wordpress wordpress-connection (endpathize endpoint-path))))
+
+(defn api-updater
+  ([wordpress-connection endpoint-path data]
+   (post-to-wordpress wordpress-connection (endpathize endpoint-path) data))
+  ([wordpress-connection endpoint-path item-key item-value]
+   (api-updater wordpress-connection endpoint-path {item-key item-value})))
 
 (defn get-site-information
   "Gets raw information about a site that has WordPress installed.

@@ -3,294 +3,146 @@
             [cheshire.core :refer :all]
             [clo-wp.core :refer :all]))
 
-;; Should this be vector??
-
 (defn get-pages
-  "Gets all the pages from a wordpress-connection.
-
-  Takes an instantiated WordPressConnection object and returns 
-  a list of hashmaps cooresponding to the WordPress APIs page schema."
+  "Takes an WordPressConnection and 
+  gets all the page resources as JSON."
 
   [wordpress-connection]
-  (doall (get-from-wordpress wordpress-connection "/pages/")))
+  (api-getter wordpress-connection [:pages]))
 
 (defn get-page-ids
-  "Gets all the pages ids that a WordPress site currently has.
-
-  Takes an instantiated WordPressConnection record and returns
-  a vector of integers representing page IDs."
+  "Takes a WordPressConnection and gets all the page ids."
 
   [wordpress-connection]
-  (into [] (map :id (get-pages wordpress-connection))))
+  (api-getter wordpress-connection [:pages] [:id]))
 
+;; (api-getter wordpress-connection [:pages] [:title display-type])
 (defn get-page-titles
-  "Gets all the pages titles that a WordPress site currently has.
-
-  First aarity takes an instantiated WordPressConnection record and returns
-  a vector of strings representing raw page titles. This is usually what
-  you will want to use.
-
-  Second aarity takes an instantiated WordPressConnection record as well as
-  a keyword (:rendered, :raw) which will determine how to render the title.
-
-  *Note for the second aarity*
-  May throw a clojure.lang.ExceptionInfo in the case that an inproper display
-  type was passed."
+  "Takes a wordpress connection and an optional display type (which may
+  be ':rendered' or ':raw') and returns properly formatted title information."
 
   ([wordpress-connection]
    (get-page-titles wordpress-connection :raw))
 
   ([wordpress-connection display-type]
-   (->> wordpress-connection
-        get-pages
-        (map :title)
-        (map display-type)
-        (into []))))
+   (api-getter wordpress-connection [:pages] [:title display-type])))
 
-(defn- extract-page-mapping-item
-  "Utility function to generate key value pairs in get-page-mapping"
-  [x display-type] [(keyword (str (:id x))) (display-type (:title x))])
-
+;; (api-mapping wordpress-connection [:pages] [:id] [:title])
 (defn get-page-mapping
-  "Creates a mapping of page identifiers to page titles. Useful in contexts
-  in which we must explicitly associate the two. It is in general bad to
-  flip the key value pairs returned by this function because WordPress allows
-  multiple pages with unique identifiers to have the same titles. Aka, 
-  this map need not be one-to-one.
-
-  *IMPORTANT* This returns a key-value mapping of keywordized integers and 
-  strings, not integers and strings!!
-
-  First aarity takes an instantiated WordPressConnection record and returns
-  map of ids to raw page titles.
-
-  Second aarity takes an instantiated WordPressConnection record as well as
-  a keyword (:rendered, :raw) which will determine how to output the titles, 
-  this is neccessary because WordPress renders titles via a macro system.
-  In turn, a map of ids to generic page titles will be returned.
-
-  In general, the first aarity is what you will want to use unless there
-  is some reason not to.
-
-  *Note for the second aarity*
-  May throw a clojure.lang.ExceptionInfo in the case that an inproper display
-  type was passed. In general, it is best to use the single aarity unless you
-  know what your doing!"
+  "Takes a WordPressConnection and creates a mapping of page identifiers to page titles."
 
   ([wordpress-connection]
    (get-page-mapping wordpress-connection :raw))
 
   ([wordpress-connection display-type]
-   (->> wordpress-connection
-        get-pages
-        (map
-         #(extract-page-mapping-item % display-type))
-        (into {})
-        clojure.walk/keywordize-keys
-        )))
-
-(defn get-page
-  "Gets a single page from a wordpress-connection.
-
-  Requires an instantiated WordPressConnection record to be passed 
-  as well as a valid page-id based on WordPress's ID system. 
-
-  May throw a clojure.lang.ExceptionInfo in the case
-  that an inproper identifier was passed.
-
-  Use the get-page-ids function to retrieve all pages for any given instantiated WordPressConnection."
-
-  [wordpress-connection page-id]
-  (get-from-wordpress wordpress-connection (str "/pages/" page-id)))
+   (api-mapper wordpress-connection [:pages] [:id] [:title display-type])))
 
 ;; TODO MULTI METHOD ALL OF THESE FOR
 ;; SIMPLE KEYWORDS!
 
+;; (api-getter wordpress-connection [:pages page-id])
+
+(defn get-page
+  "Takes a WordPressConnection and a page-id and gets a single page's
+  JSON."
+
+  [wordpress-connection page-id]
+  (api-getter wordpress-connection [:pages page-id]))
+
+;; (api-getter wordpress-connection [:pages page-id] [content-type :content])
 (defn get-page-content
-  "Retrieves the content of a simple page from a wordpress-connection as text.
-
-  Second aarity takes an instantiated WordPressConnection record as well as a 
-  valid page-id based on WordPress's ID system and returns the !raw! content of the 
-  page if rendered content is desired, the third aarity should be used.
-  
-  Third aarity takes an instantiated WordPressConnection record, a valid page-id,
-  and the content render type one wishes to use: The current types that are returned
-  by the WordPress JSON API are :rendered and :raw. :raw is only accessable when
-  in the 'edit' context.
-
-  May throw a clojure.lang.ExceptionInfo in the case that an inproper page-id
-  was passed. May return nil if a non-existant content-type was passed.
-
-  Use the get-page-ids function to retrieve all pages for any given instantiated WordPressConnection."
+  "Takes a WordPressConnection and a page retrieves that content of said
+  page. Also allows optional parameter of content-type in the case that
+  one wants to have :rendered or :raw content."
 
   ([wordpress-connection page-id]
    (get-page-content wordpress-connection page-id :raw))
 
   ([wordpress-connection page-id content-type]
-   (content-type
-    (:content
-     (get-page wordpress-connection page-id)))))
+   (api-getter wordpress-connection [:pages page-id] [:content content-type])))
 
+;; (api-getter wordpress-connection [:pages page-id] [content-type :title])
 (defn get-page-title
-  "Retrieves the content of a simple page from a wordpress-connection as text.
-
-  Second aarity takes an instantiated WordPressConnection record as well as a 
-  valid page-id based on WordPress's ID system and returns the !raw! content of the 
-  page if rendered content is desired, the third aarity should be used. In turn
-  returns a said pages title.
-  
-  Third aarity takes an instantiated WordPressConnection record, a valid page-id,
-  and the content render type one wishes to use: The current types that are returned
-  by the WordPress JSON API are :rendered and :raw. :raw is only accessable when
-  in the 'edit' context. In turn returns said pages title.
-
-  May throw a clojure.lang.ExceptionInfo in the case that an inproper page-id
-  was passed. May return nil if a non-existant content-type was passed.
-
-  Use the get-page-ids function to retrieve all pages for any given instantiated WordPressConnection."
+  "Takes a WordPressConnection and a page and retrieves the title of said 
+  page as text."
 
   ([wordpress-connection page-id]
    (get-page-title wordpress-connection page-id :raw))
 
   ([wordpress-connection page-id content-type]
-   (content-type
-    (:title
-     (get-page wordpress-connection page-id)))))
+   (api-getter wordpress-connection [:pages page-id] [:title content-type])))
 
+;; (api-item-updater wordpress-connection [:pages page-id])
 (defn update-page
-  "Uses an authenticated WordPressConnection and page id to update a page generically
-  with a map of attributes to be updated.
-
-  Takes an instantiated WordPressConnection, a valid page identifier, and a hashmap
-  representing data to be associated onto the page.
-
-  May throw a clojure.lang.ExceptionInfo in the case that an inproper page-id was 
-  passed.
-
-  Use the get-page-ids function to retrieve all pages for any given instantiated WordPressConnection."
+  "Takes an authenticated WordPressConnection and page id to update a page 
+  with a map of attributes to be updated. Read the WordPress API documentation
+  to see information on the schema."
 
   [wordpress-connection page-id data]
-  (:body (post-to-wordpress wordpress-connection (str "/pages/" page-id) data)))
+  (api-updater wordpress-connection [:pages page-id] data))
 
+;; (api-item-single-updater wordpress-connection [:pages page-id] :content)
 (defn update-page-content
-  "Uses an authenticated WordPressConnection and page id to only update a pages content.
-
-  Takes an instantiated WordPressConnection, a valid page identifier, and a string
-  representing raw content to be applied to a page.
-
-  May throw a clojure.lang.ExceptionInfo in the case that an inproper page-id was 
-  passed.
-
-  Use the get-page-ids function to retrieve all pages for any given instantiated WordPressConnection."
+  "Takes an authenticated WordPressConnection and a page id to update a pages content."
 
   [wordpress-connection page-id content]
-  (update-page wordpress-connection page-id {:content content}))
+  (api-updater wordpress-connection [:pages page-id] :content content))
 
+;; (api-item-single-updater wordpress-connection [:pages page-id] :title)
 (defn update-page-title
-  "Uses an authenticated WordPressConnection and page id to only update a pages title.
-
-  Takes an instantiated WordPressConnection, a valid page identifier, and a string
-  representing a raw title to be applied to a page.
-
-  May throw a clojure.lang.ExceptionInfo in the case that an inproper page-id was 
-  passed.
-
-  Use the get-page-ids function to retrieve all pages for any given instantiated WordPressConnection."
+  "Takes an authenticated WordPressConnection and a page id to update a pages title."
 
   [wordpress-connection page-id title]
-  (update-page wordpress-connection page-id {:title title}))
+  (api-updater wordpress-connection [:pages page-id] :title title))
 
+;; Requires custom implementation
 (defn create-page
-  "Uses an authenticated WordPressConnection to generate a new page.
-
-  Second aarity takes an instantiated WordPressConnection, and a hashmap 
-  representing data to instantiate a new page page with.
-
-  Third aarity represents the usual use case in which the user does not
-  care about the status of a page (and as a result will default to publish)
-  it takes an instantiated WordPressConnection, a title, and a content.
-
-  Fourth aarity represents the usual use case that takes an instantiated 
-  WordPressConnection, a title, a content, and the status which can be either 
-  :publish, :future, :draft, :pending, or :private.
-  
-  *Note on fourth aarity*
-  May throw a clojure.lang.ExceptionInfo in the case that an inproper status was 
-  passed. The other two aarities are quite safe, but make sure you are using the
-  only the status types which your WordPress version supports if this aarity is used!
-
-  All aarities return the the json representation of the new page."
+  "Takes an authenticated WordPressConnection, and either an attribute map,
+  , a title and a content, or a title and a content and a status 
+  to generate a new page, returning the new page as JSON. See the WordPress
+  API documentation for the page schema."
 
   ([wordpress-connection attrs]
-   (:body (post-to-wordpress wordpress-connection (str "/pages") attrs)))
+   (api-updater wordpress-connection [:pages] attrs))
 
   ([wordpress-connection title content]
-   (create-page wordpress-connection {:title title :content content :status :publish}))
+   (create-page
+    wordpress-connection
+    {:title title :content content :status :publish}))
 
   ([wordpress-connection title content status]
-   (create-page wordpress-connection {:title title :content content :status status})))
+   (create-page
+    wordpress-connection
+    {:title title :content content :status status})))
 
+;; (api-item-deleter wordpress-connection [:pages page-id])
 (defn delete-page
-  "Uses an authenticated WordPressConnection and page id to delete a page.
-
-  Takes an instantiated WordPressConnection and a valid page identifier.
-
-  May throw a clojure.lang.ExceptionInfo in the case that an inproper page-id was 
-  passed.
-
-  Returns the entire page object in order to make use a little bit less risky!
-  Still, use this function with caution!  
-
-  Use the get-page-ids function to retrieve all pages for any given instantiated WordPressConnection."
+  "Takes an authenticated WordPressConnection and a page id and deletes a page.
+  returns the JSON object of the now deleted page."
 
   [wordpress-connection page-id]
   (:body (delete-from-wordpress wordpress-connection (str "/pages/" page-id))))
 
-;; Should this be vector??
-
+;; (api-collection-getter wordpress-connection [:pages page-id :revisions])
 (defn get-page-revisions
-  "Uses an authenticated WordPressConnection and page id to get all of the page 
-  revisions for a specific page.
-
-  Takes an instantiated WordPressConnection and a valid page identifier.
-
-  May throw a clojure.lang.ExceptionInfo in the case that an inproper page-id was
-  passed.
-
-  Returns a collection of page revision maps.
-
-  Use the get-page-ids function to retrieve all pages for any given instantiated WordPressConnection."
+  "Takes an authenticated WordPressConnection and page id and gets all of the page 
+  revisions for a specific page as JSON."
 
   [wordpress-connection page-id]
   (doall (get-from-wordpress wordpress-connection (str "/pages/" page-id "/revisions"))))
 
+;; (api-collection-getter wordpress-connection [:pages page-id :revisions] [:id])
 (defn get-page-revision-ids
-  "Gets all the page revision ids that a given page id in a WordPress 
-  site currently has.
-
-  May throw a clojure.lang.ExceptionInfo in the case that an inproper page-id was
-  passed.
-
-  Takes an instantiated WordPressConnection record and a page id 
-  and returns a vector of integers representing page revision IDs."
+  "Takes an authenticated WordPressConnection and a page id to gets all the page revision ids 
+  that a given page id in a WordPress site currently has."
 
   [wordpress-connection page-id]
   (into [] (map :id (get-page-revisions wordpress-connection page-id))))
 
+;; (api-collection-getter wordpress-connection [:pages page-id :revisions revision-id])
 (defn get-page-revision
-  "Uses an authenticated WordPressConnection, a page id, and a specific
-  revision id to give back information about said specific revision. 
-
-  Takes an instantiated WordPressConnection, a valid page identifier,
-  and a valid revision identifier.
-
-  Returns a specific page-revision map.
-
-  May throw a clojure.lang.ExceptionInfo in the case that an inproper page-id 
-  OR page-revision-id was passed.
-
-  Use the get-page-revision-ids function to retrieve all page 
-  revisions for any given page given back by get-page/get-pages."
+  "Takes an authenticated WordPressConnection, a page id, and a
+  revision id and returns information about that specific revision."
 
   [wordpress-connection page-id page-revision-id]
   (->> page-revision-id
@@ -298,20 +150,10 @@
        (get-from-wordpress wordpress-connection)
        :body))
 
+;; (api-item-deleter wordpress-connection [:pages page-id :revisions revision-id])
 (defn delete-page-revision
-  "Uses an authenticated WordPressConnection, a page id, and a 
-  specific revision id to delete a page revision.
-
-  Takes an instantiated WordPressConnection, a valid page identifier,
-  and a valid revision identifier.
-
-  Returns a map of the now deleted page revision.
-
-  May throw a clojure.lang.ExceptionInfo in the case that an inproper page-id 
-  OR page-revision-id was passed.
-
-  Use the get-page-revision-ids function to retrieve all page 
-  revisions for any given page given back by get-page/get-pages."
+  "Takes an authenticated WordPressConnection, a page id, and a 
+  rivision id, deletes the page, and returns the now deleted page."
 
   [wordpress-connection page-id page-revision-id]
   (:body
