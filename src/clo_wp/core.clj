@@ -150,28 +150,47 @@
 ;; WE CAN USE THEM ON LOCAL MAPS, DIRECT
 ;; URLS!
 
+(defn url-extraction-scheme
+  [item]
+  (:url item))
+
 (defn api-getter
-  ([wordpress-connection endpoint-path]
-   (doall (get-from-wordpress wordpress-connection (endpathize endpoint-path))))
+  ([wordpress-connection resource]
+   (if (vector? resource)
+     (doall (get-from-wordpress wordpress-connection (endpathize resource)))
+     (doall (get-from-wordpress wordpress-connection (url-extraction-scheme resource)))))
   ([wordpress-connection endpoint-path extraction-items]
    (let [response (api-getter wordpress-connection endpoint-path)]
-     (if (seq? response)
+     (if (vector? response)
        (into [] (map #(get-in % extraction-items) response))
        (if (map? response)
          (get-in response extraction-items))))))
 
+;; Requires multimethod to determine dispatch of endpoint path vs
+;; map
 (defn api-mapper
-  ([wordpress-connection endpoint-path key-extraction-item value-extraction-item]
-   (clojure.walk/keywordize-keys
-    (into {}
-          (map #(identity [(get-in % key-extraction-item) (get-in % value-extraction-item)])
-               (api-getter wordpress-connection endpoint-path))))))
+  ([wordpress-connection resource key-extraction-item value-extraction-item]
+   (if (vector? resource)
+     (clojure.walk/keywordize-keys
+       (into {}
+         (map #(identity [(get-in % key-extraction-item) (get-in % value-extraction-item)])
+              (api-getter wordpress-connection resource))))
+     (if (map? resource)
+       (into {}
+         (map #(identity [(get-in % key-extraction-item) (get-in % value-extraction-item)])
+              resource))))))
 
 (defn api-deleter
-  ([wordpress-connection endpoint-path]
-    (delete-from-wordpress wordpress-connection (endpathize endpoint-path))))
+  ([wordpress-connection resource]
+   (if (map? resource)
+     (delete-from-wordpress wordpress-connection (url-extraction-scheme resource))
+     (if (vector? resource)
+       (delete-from-wordpress wordpress-connection (endpathize resource))
+       (throw (IllegalArgumentException. "Resource passed to api-deleter must be path or resource item."))))))
 
 (defn api-updater
+  ([wordpress-connection resource]
+   (api-updater wordpress-connection (url-extraction-scheme resource) resource))
   ([wordpress-connection endpoint-path data]
    (post-to-wordpress wordpress-connection (endpathize endpoint-path) data))
   ([wordpress-connection endpoint-path item-key item-value]
