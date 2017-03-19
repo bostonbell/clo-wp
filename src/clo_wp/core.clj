@@ -2,6 +2,10 @@
   (:require [clj-http.client :as client]
             [cheshire.core :refer :all]))
 
+(defrecord WordPressConnection [url username password])
+
+;; Utilities for building queries to WordPress API
+
 (defn build-api-endpoint
   "Function used generally for internal use to build endpoint paths."
   ([url ep] (str url "/wp-json/wp/v2" ep))
@@ -16,20 +20,11 @@
       (client/success? response))
     (catch Exception e false)))
 
-(defrecord WordPressConnection [url username password])
-
 (defn connect
-  "Attempts to connect to a site which has WordPress installed.
+  "Attempts to connect to a site which has WordPress installed. Takes a 
+  url, username, and password and either throws in the case some issue
+  with said credentials is encountered, or gives back a new WordPressConnection."
 
-  Takes a url which must be properly formatted (see below), a username, and a password.
-  Returns a WordPressConnection instance that we are pretty sure can be used in all the
-  libraries functions.
-
-  Note that the URL must be fully formatted: http:// or https:// must be included, otherwise
-  an error will occur.
-
-  In certain cases where the JSON api can not be found, an IllegalArgumentException will be 
-  thrown, and likewise for not including an HTTP header."
   [url username password]
   (if (or (clojure.string/includes? url "http://") (clojure.string/includes? url "https://"))
     (if (has-wordpress-api url)
@@ -37,7 +32,8 @@
         (throw (IllegalArgumentException. "This URL does not seem to have a cooresponding WordPress API or does not exist.")))
     (throw (IllegalArgumentException. "URL did not include http header: Try using the fully qualified URL."))))
 
-;; TODO: Easier passing of query params.
+;; Functions for sending http methods to WordPress endpoints.
+
 (defn get-from-wordpress
   "Raw API call for receiving data from a site that has WordPress installed.
   
@@ -64,7 +60,7 @@
      (if (empty? (:body response))
        ()
        (if (= (get-in response [:_links :collection]) nil)
-         (:body response)
+         [(into {} (:body response))]
          (lazy-seq (concat
            (:body response)
            (get-from-wordpress wordpress-connection
@@ -121,6 +117,7 @@
    ([wordpress-connection endpoint-path data]
     (post-to-wordpress wordpress-connection endpoint-path :edit data)))
 
+;; Functions for helping with path deductions from Clojure keywords.
 
 (defmulti str-item
   (fn [item]))
@@ -146,19 +143,16 @@
              special-stringize)
             items))))
 
-;; TODO MULTI METHOD ALL OF THESE SO
-;; WE CAN USE THEM ON LOCAL MAPS, DIRECT
-;; URLS!
-
 (defn url-extraction-scheme
   [item]
-  (:url item))
+  (:href (first (get-in item [:_links :self]))))
+
+;; Functions for abstracting API calls into a single method (Used in defwp macro.)
+;; Work as lazy iterators in conjunction with http calls.
 
 (defn api-getter
   ([wordpress-connection resource]
-   (if (vector? resource)
-     (doall (get-from-wordpress wordpress-connection (endpathize resource)))
-     (doall (get-from-wordpress wordpress-connection (url-extraction-scheme resource)))))
+    (into [] (doall (get-from-wordpress wordpress-connection (endpathize resource)))))
   ([wordpress-connection endpoint-path extraction-items]
    (let [response (api-getter wordpress-connection endpoint-path)]
      (if (vector? response)
@@ -166,8 +160,6 @@
        (if (map? response)
          (get-in response extraction-items))))))
 
-;; Requires multimethod to determine dispatch of endpoint path vs
-;; map
 (defn api-mapper
   ([wordpress-connection resource key-extraction-item value-extraction-item]
    (if (vector? resource)
@@ -196,6 +188,8 @@
   ([wordpress-connection endpoint-path item-key item-value]
    (api-updater wordpress-connection endpoint-path {item-key item-value})))
 
+;; Generic API Information getters.
+
 (defn get-site-information
   "Gets raw information about a site that has WordPress installed.
 
@@ -212,17 +206,63 @@
                          (:password wordpress-connection)]
                           :as :json})))
 
-(defn generate-id-getter
-  "Gets all the ids from a given resource.
+;; Methods for generating specific http calls to specific endpoints.
 
-  Takes a callback to be used that will get information
-  for a specific endpoint."
+(defn get-resource
+  "Takes an WordPressConnection and 
+  gets all the content-item resources as JSON."
 
-  [callback]
-  (fn [wordpress-connection]
-    (->> wordpress-connection
-         callback
-         (map :id)
-         (into []))))
+  ([resource-names wordpress-connection]
+   (api-getter wordpress-connection resource-names)))
 
+(defn post-resource
+  "Takes an authenticated WordPressConnection and content-item id to update a content-item 
+  with a map of attributes to be updated. Read the WordPress API documentation
+  to see information on the schema."
+
+  ([resource-names wordpress-connection arg-map]
+   (api-updater wordpress-connection resource-names arg-map)))
+
+(defn delete-resource
+  "Takes an authenticated WordPressConnection and a content-item id and deletes a content-item.
+  returns the JSON object of the now deleted content-item."
+
+  ([resource-names wordpress-connection]
+    (api-deleter wordpress-connection resource-names)))
+
+(defn dispatch-resource
+  ([resource-names wordpress-connection]
+      (get-resource resource-names wordpress-connection))
+  ([resource-names wordpress-connection arg-map]
+      (post-resource resource-names wordpress-connection arg-map))
+  ([resource-names wordpress-connection arg-map method]
+    (case method
+      :get (get-resource resource-names wordpress-connection)
+      :post (post-resource resource-names wordpress-connection arg-map)
+      :put (post-resource resource-names wordpress-connection arg-map)
+      :delete (delete-resource resource-names wordpress-connection)))
+  ([content-items wordpress-connection arg-map method callback]
+    (callback (dispatch-resource content-items wordpress-connection arg-map method))))
+
+;; The bread and butter: Allows us to define an endpoint and extract information from it.
+
+(defmacro defwp
+  ([endpoint-name path]
+  (let [param-list (into [] (concat ['method 'wordpress-connection] (into [] (filter symbol? path)) ['& 'args]))
+       param-list-default (into [] (concat ['wordpress-connection] (into [] (filter symbol? path))))]
+  `(do
+    (defn ~endpoint-name
+      (~param-list
+         (dispatch-resource ~path ~'wordpress-connection (into {} ~'args) ~'method))
+      (~param-list-default
+       (dispatch-resource ~path ~'wordpress-connection {} :get))))))
+  ([endpoint-name path callback]
+  (let [param-list (into [] (concat ['method 'wordpress-connection] (into [] (filter symbol? path)) ['& 'args]))
+       param-list-default (into [] (concat ['wordpress-connection] (into [] (filter symbol? path))))]
+  `(do
+    (defn ~endpoint-name
+      (~param-list
+         (~callback (dispatch-resource ~path ~'wordpress-connection (into {} ~'args) ~'method)))
+      (~param-list-default
+         (~callback (dispatch-resource ~path ~'wordpress-connection {} :get))))))))
 
